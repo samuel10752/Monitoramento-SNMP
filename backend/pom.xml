@@ -1,0 +1,27 @@
+<dependencies>
+    <!-- Spring Boot Web para API REST -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- Biblioteca SNMP -->
+    <dependency>
+        <groupId>org.snmp4j</groupId>
+        <artifactId>snmp4j</artifactId>
+        <version>3.6.4</version>
+    </dependency>
+
+    <!-- Java HTTP Server (caso use sem Spring Boot) -->
+    <dependency>
+        <groupId>com.sun.net.httpserver</groupId>
+        <artifactId>httpserver</artifactId>
+        <version>20070405</version>
+    </dependency>
+
+    <!-- Spring Boot Starter -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+</dependencies>

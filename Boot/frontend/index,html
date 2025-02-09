@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contadores da Impressora</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .counter {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Contadores da Impressora Epson L3250</h1>
+    <div id="counters">
+        <div class="counter">Carregando...</div>
+    </div>
+
+    <script>
+        // Função para buscar os contadores da API
+        async function fetchCounters() {
+            try {
+                const response = await fetch('http://localhost:8080/api/counters');
+                const data = await response.json();
+                displayCounters(data);
+            } catch (error) {
+                document.getElementById('counters').innerHTML = `<div class="counter">Erro ao carregar os contadores: ${error.message}</div>`;
+            }
+        }
+
+        // Função para exibir os contadores na página
+        function displayCounters(counters) {
+            const countersDiv = document.getElementById('counters');
+            countersDiv.innerHTML = ''; // Limpa o conteúdo anterior
+
+            for (const [key, value] of Object.entries(counters)) {
+                const counterDiv = document.createElement('div');
+                counterDiv.className = 'counter';
+                counterDiv.textContent = `${key}: ${value}`;
+                countersDiv.appendChild(counterDiv);
+            }
+        }
+
+        // Carrega os contadores ao abrir a página
+        fetchCounters();
+    </script>
+</body>
+</html>
