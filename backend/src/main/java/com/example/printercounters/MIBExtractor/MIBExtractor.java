@@ -29,6 +29,9 @@ public class MIBExtractor {
             String filePath = "output/" + ip.replace(".", "_") + ".txt";
             FileWriter fileWriter = new FileWriter(filePath);
 
+            // Escreve o IP no arquivo de saída
+            fileWriter.write("IP da impressora: " + ip + "\n");
+
             // Configuração SNMP
             TransportMapping<UdpAddress> transport = new DefaultUdpTransportMapping();
             Snmp snmp = new Snmp(transport);
@@ -83,4 +86,3 @@ public class MIBExtractor {
         }
     }
 }
-
