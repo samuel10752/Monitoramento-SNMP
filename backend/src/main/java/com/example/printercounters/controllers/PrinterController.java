@@ -1,5 +1,7 @@
 package com.example.printercounters.controllers;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
@@ -16,52 +18,45 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.net.ssl.*;
 import java.io.IOException;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 
 @RestController
 @RequestMapping("/api")
 public class PrinterController {
 
     private final Snmp snmp;
-    private final String printerAddress;
 
     public PrinterController() throws Exception {
-        this.printerAddress = "udp:192.168.1.12/161"; // Endereço da impressora
         TransportMapping<?> transport = new DefaultUdpTransportMapping();
         this.snmp = new Snmp(transport);
         transport.listen();
     }
 
     @GetMapping("/counters")
-    public Map<String, String> getCounters() {
+    public Map<String, String> getCounters() throws IOException {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Digite o IP da impressora: ");
+        String ip = scanner.nextLine();
+
         Map<String, String> counters = new HashMap<>();
 
-        // OIDs para a Epson L3250
-        Map<String, String> oids = new HashMap<>();
-        oids.put("Total de Paginas", "1.3.6.1.2.1.43.10.2.1.4.1.1"); // Total de páginas impressas
-        oids.put("Paginas Preto e Branco", "1.3.6.1.4.1.1248.1.2.2.27.1.1.3.1.1"); // Páginas em preto e branco
-        oids.put("Paginas Colorido", "1.3.6.1.2.1.43.10.2.1.5.1.1"); // Páginas coloridas
-        oids.put("MAC", "1.3.6.1.2.1.2.2.1.6.1"); // Nível de MAC
-        oids.put("ColorInkLevel", "1.3.6.1.2.1.43.11.1.1.9.1.2"); // Nível de tinta colorida
+        // Adiciona o IP capturado
+        counters.put("IP da Impressora", ip);
 
-        for (Map.Entry<String, String> entry : oids.entrySet()) {
-            String key = entry.getKey();
-            String oidValue = entry.getValue();
-            try {
-                String value = getSnmpValue(oidValue);
-                counters.put(key, value);
-            } catch (IOException e) {
-                e.printStackTrace();
-                counters.put(key, "Erro ao obter valor");
-            }
-        }
-        return counters;
-    }
+        // Adiciona conteúdo da página web
+        String url = "https://" + ip + "/PRESENTATION/ADVANCED/INFO_MENTINFO/TOP";
+        Map<String, String> webData = getWebPageData(url);
 
-    private String getSnmpValue(String oid) throws IOException {
-        Address targetAddress = GenericAddress.parse(printerAddress);
+        // Adiciona os dados da página web aos contadores
+        counters.putAll(webData);
+
+        // Captura informações SNMP
+        Address targetAddress = GenericAddress.parse("udp:" + ip + "/161");
         CommunityTarget target = new CommunityTarget();
         target.setCommunity(new OctetString("public")); // Comunidade SNMP (verifique se está correta para sua impressora)
         target.setAddress(targetAddress);
@@ -69,6 +64,30 @@ public class PrinterController {
         target.setTimeout(1500);
         target.setVersion(SnmpConstants.version2c);
 
+        // Captura o endereço MAC
+        String macOid = "1.3.6.1.2.1.2.2.1.6.1";
+        String macAddress = getSnmpValue(macOid, target);
+        counters.put("Endereço MAC", macAddress);
+
+        // Captura o número de série
+        String serialNumberOid = "1.3.6.1.2.1.43.5.1.1.17.1";
+        String serialNumber = getSnmpValue(serialNumberOid, target);
+        counters.put("Número de Série", serialNumber);
+
+        // Captura o modelo
+        String modelOid = "1.3.6.1.2.1.43.5.1.1.16.1";
+        String model = getSnmpValue(modelOid, target);
+        counters.put("Modelo", model);
+
+        // Captura a marca
+        String brandOid = "1.3.6.1.2.1.25.3.2.1.3.1";
+        String brand = getSnmpValue(brandOid, target);
+        counters.put("Marca", brand);
+
+        return counters;
+    }
+
+    private String getSnmpValue(String oid, CommunityTarget target) throws IOException {
         PDU pdu = new PDU();
         pdu.add(new VariableBinding(new OID(oid)));
         pdu.setType(PDU.GET);
@@ -79,5 +98,57 @@ public class PrinterController {
         } else {
             throw new IOException("Erro ao obter valor SNMP para OID: " + oid);
         }
+    }
+
+    private static void disableSSLCertificateChecking() {
+        try {
+            TrustManager[] trustAllCerts = new TrustManager[]{
+                    new X509TrustManager() {
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return null;
+                        }
+
+                        public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                        }
+
+                        public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                        }
+                    }
+            };
+
+            SSLContext sc = SSLContext.getInstance("SSL");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+
+            HostnameVerifier allHostsValid = (hostname, session) -> true;
+            HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static Map<String, String> getWebPageData(String url) throws IOException {
+        // Desabilitar verificação de certificado SSL
+        disableSSLCertificateChecking();
+
+        // Conecta à página web e extrai o conteúdo
+        Document doc = Jsoup.connect(url).get();
+        Map<String, String> webData = new HashMap<>();
+
+        // Extrai informações da página
+        String totalNumberOfPages = doc.select("dt:contains(Total Number of Pages) + dd .preserve-white-space").text();
+        String totalNumberOfBWPages = doc.select("dt:contains(Total Number of B&W Pages) + dd .preserve-white-space").text();
+        String totalNumberOfColorPages = doc.select("dt:contains(Total Number of Color Pages) + dd .preserve-white-space").text();
+        String totalNumberOfBWScan = doc.select("dt:contains(B&W Scan) + dd .preserve-white-space").text();
+        String totalNumberOfColorScan = doc.select("dt:contains(Color Scan) + dd .preserve-white-space").text();
+
+        // Adiciona as informações ao mapa
+        webData.put("Total Number of Pages", totalNumberOfPages);
+        webData.put("Total Number of B&W Pages", totalNumberOfBWPages);
+        webData.put("Total Number of Color Pages", totalNumberOfColorPages);
+        webData.put("B&W Scan", totalNumberOfBWScan);
+        webData.put("Color Scan", totalNumberOfColorScan);
+
+        return webData;
     }
 }
