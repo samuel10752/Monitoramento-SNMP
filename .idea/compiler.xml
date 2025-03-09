@@ -8,15 +8,18 @@
         <outputRelativeToContentRoot value="true" />
         <module name="printer-counters" />
         <module name="backend" />
+        <module name="meu-projeto" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="meu-projeto (1)" target="17" />
       <module name="snmp4j" target="1.8" />
     </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="backend" options="-parameters" />
+      <module name="meu-projeto" options="-parameters" />
       <module name="printer-counters" options="-parameters" />
     </option>
   </component>
