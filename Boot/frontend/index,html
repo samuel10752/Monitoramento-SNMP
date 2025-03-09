@@ -23,7 +23,7 @@
     <div id="counters">
         <div class="counter">Carregando...</div>
     </div>
-
+ 
     <script>
         // Função para buscar os contadores da API
         async function fetchCounters() {
