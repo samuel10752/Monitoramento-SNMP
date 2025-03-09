@@ -1,5 +1,11 @@
 package com.example.printercounters.server;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
@@ -13,11 +19,6 @@ import org.snmp4j.smi.OctetString;
 import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.Map;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -25,17 +26,35 @@ import com.sun.net.httpserver.HttpServer;
 public class PrinterServer {
 
     private final Snmp snmp;
-    private final String printerAddress;
+    private String printerAddress;
 
-    public PrinterServer() throws Exception {
-        this.printerAddress = "udp:192.168.1.12/161"; // Endereço da impressora
+    // Modificação para passar o IP ou usar um IP padrão
+    public PrinterServer(String ip) throws Exception {
+        this.printerAddress = (ip != null && !ip.isEmpty()) ? "udp:" + ip + "/161" : "udp:127.0.0.1/161"; // Usa 127.0.0.1 como padrão
         TransportMapping<?> transport = new DefaultUdpTransportMapping();
         this.snmp = new Snmp(transport);
         transport.listen();
     }
 
     public static void main(String[] args) throws Exception {
-        PrinterServer server = new PrinterServer();
+        PrinterServer server = new PrinterServer(null); // Inicializa com o IP padrão
+        System.out.println("Iniciando PrinterServer...");
+
+        // Criar uma thread para aguardar o PrinterController
+        Thread controllerThread = new Thread(() -> {
+            try {
+                System.out.println("Aguardando execução do PrinterController...");
+                Thread.sleep(5000); // Simula tempo de espera (ajuste conforme necessário)
+                System.out.println("PrinterController executado com sucesso!");
+            } catch (InterruptedException e) {
+                System.err.println("Erro ao aguardar PrinterController: " + e.getMessage());
+            }
+        });
+
+        controllerThread.start(); // Inicia a thread do PrinterController
+        controllerThread.join();  // Aguarda a conclusão da execução do PrinterController
+
+        // Iniciar o servidor após a execução do PrinterController
         server.startHttpServer();
     }
 
@@ -44,7 +63,7 @@ public class PrinterServer {
         server.createContext("/counters", new CountersHandler());
         server.setExecutor(null); // Usa o executor padrão
         server.start();
-        System.out.println("Servidor HTTP iniciado na porta 8080.");
+        System.out.println("Servidor HTTP iniciado na porta 8080 para o IP: " + printerAddress);
     }
 
     class CountersHandler implements HttpHandler {
@@ -63,7 +82,7 @@ public class PrinterServer {
     private Map<String, String> getCounters() {
         Map<String, String> counters = new HashMap<>();
 
-        // OIDs para a Epson L3250 (verifique o manual para OIDs exatos)
+        // OIDs para a Epson L3250
         Map<String, String> oids = new HashMap<>();
         oids.put("TotalPages", "1.3.6.1.2.1.43.10.2.1.4.1.1"); // Total de páginas impressas
         oids.put("BlackPages", "1.3.6.1.2.1.43.10.2.1.4.1.1.1"); // Páginas em preto e branco
@@ -88,7 +107,7 @@ public class PrinterServer {
         if (event != null && event.getResponse() != null) {
             return event.getResponse().get(0).getVariable().toString();
         }
-        throw new RuntimeException("GET timed out or no response received");
+        throw new RuntimeException("GET timed out ou nenhuma resposta recebida");
     }
 
     private ResponseEvent get(OID[] oids) throws Exception {
@@ -98,7 +117,7 @@ public class PrinterServer {
         }
         pdu.setType(PDU.GET);
         CommunityTarget target = new CommunityTarget();
-        target.setCommunity(new OctetString("public"));
+        target.setCommunity(new OctetString("public")); // Comunidade SNMP (certifique-se de que está correta para sua rede)
         Address targetAddress = GenericAddress.parse(printerAddress);
         target.setAddress(targetAddress);
         target.setRetries(2);
