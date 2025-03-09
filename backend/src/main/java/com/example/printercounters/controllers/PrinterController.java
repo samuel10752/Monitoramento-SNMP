@@ -1,5 +1,18 @@
 package com.example.printercounters.controllers;
 
+
+import java.io.IOException;
+import java.security.cert.X509Certificate;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.snmp4j.CommunityTarget;
@@ -18,17 +31,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.net.ssl.*;
-import java.io.IOException;
-import java.security.cert.X509Certificate;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
-
 @RestController
 @RequestMapping("/api")
 public class PrinterController {
-
     private final Snmp snmp;
 
     public PrinterController() throws Exception {
@@ -36,6 +41,7 @@ public class PrinterController {
         this.snmp = new Snmp(transport);
         transport.listen();
     }
+
 
     @GetMapping("/counters")
     public Map<String, String> getCounters() throws IOException {
@@ -150,5 +156,6 @@ public class PrinterController {
         webData.put("Color Scan", totalNumberOfColorScan);
 
         return webData;
+    
     }
 }
