@@ -2,6 +2,7 @@ package com.example.printercounters.controllers;
 
 import com.example.printercounters.epson.EpsonL3250;
 import com.example.printercounters.hp.E52645Flow;
+import com.example.printercounters.hp.HP4303;
 import com.example.printercounters.styles.Estilo;
 
 import javafx.animation.KeyFrame;
@@ -154,12 +155,15 @@ public class PrinterInfoDisplay extends Application {
 
                 // Verifica a marca e o modelo da impressora com base no IP
                 // Aqui você pode adicionar lógica para escolher a marca e o modelo com base em outro critério se necessário
-                EpsonL3250 epson = new EpsonL3250(ip, macField, serialField, nameprinterField, webInfoArea);
-                E52645Flow hp = new E52645Flow(ip, macField, serialField, nameprinterField, webInfoArea);
-                epson.fetchPrinterInfo();
-                epson.fetchWebPageData();
-                hp.fetchPrinterInfo();
-                hp.fetchWebPageData();
+                EpsonL3250 EpsonL3250 = new EpsonL3250(ip, macField, serialField, nameprinterField, webInfoArea);
+                E52645Flow hpE52645Flow = new E52645Flow(ip, macField, serialField, nameprinterField, webInfoArea);
+                HP4303 HP4303 = new HP4303(ip, macField, serialField, nameprinterField, webInfoArea);
+                EpsonL3250.fetchPrinterInfo();
+                EpsonL3250.fetchWebPageData();
+                hpE52645Flow.fetchPrinterInfo();
+                hpE52645Flow.fetchWebPageData();
+                HP4303.fetchPrinterInfo();
+                HP4303.fetchWebPageData();
             }
         });
     }
