@@ -1,4 +1,10 @@
-C:\Users\samue\OneDrive\Documentos\Projetos\Monitoramento-SNMP\backend\src\main\java\com\example\printercounters\controllers\PrinterController.java
-C:\Users\samue\OneDrive\Documentos\Projetos\Monitoramento-SNMP\backend\src\main\java\com\example\printercounters\MIBExtractor\MIBExtractor.java
-C:\Users\samue\OneDrive\Documentos\Projetos\Monitoramento-SNMP\backend\src\main\java\com\example\printercounters\server\PrinterServer.java
-C:\Users\samue\OneDrive\Documentos\Projetos\Monitoramento-SNMP\backend\src\main\java\com\example\PrinterCountersApplication.java
+C:\Users\samuel.barbosa\Documents\Monitoramento-SNMP\backend\src\main\java\com\example\printercounters\controllers\PrinterInfoDisplay.java
+C:\Users\samuel.barbosa\Documents\Monitoramento-SNMP\backend\src\main\java\com\example\printercounters\server\PrinterServer.java
+C:\Users\samuel.barbosa\Documents\Monitoramento-SNMP\backend\src\main\java\com\example\printercounters\MIBExtractor\MIBExtractorGUI.java
+C:\Users\samuel.barbosa\Documents\Monitoramento-SNMP\backend\src\main\java\com\example\printercounters\styles\Estilo.java
+C:\Users\samuel.barbosa\Documents\Monitoramento-SNMP\backend\src\main\java\com\example\printercounters\epson\EpsonL3250.java
+C:\Users\samuel.barbosa\Documents\Monitoramento-SNMP\backend\src\main\java\com\example\printercounters\MainMibextractor.java
+C:\Users\samuel.barbosa\Documents\Monitoramento-SNMP\backend\src\main\java\com\example\printercounters\controllers\PrinterModel.java
+C:\Users\samuel.barbosa\Documents\Monitoramento-SNMP\backend\src\main\java\com\example\printercounters\MainPrinterInfo.java
+C:\Users\samuel.barbosa\Documents\Monitoramento-SNMP\backend\src\main\java\com\example\PrinterCountersApplication.java
+C:\Users\samuel.barbosa\Documents\Monitoramento-SNMP\backend\src\main\java\com\example\printercounters\controllers\PrinterController.java
