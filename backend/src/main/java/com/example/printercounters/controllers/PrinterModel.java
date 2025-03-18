@@ -35,6 +35,10 @@ public abstract class PrinterModel {
 
     public abstract void fetchWebPageData();
 
+        public abstract String getMacAddress();
+    public abstract String getSerialNumber();
+    public abstract String getWebCounters();
+
     protected void disableSSLCertificateChecking() {
         try {
             TrustManager[] trustAllCerts = new TrustManager[]{

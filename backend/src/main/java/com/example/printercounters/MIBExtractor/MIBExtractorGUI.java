@@ -1,32 +1,32 @@
 package com.example.printercounters.MIBExtractor;
 
+import java.awt.Desktop;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+
+import org.snmp4j.CommunityTarget;
+import org.snmp4j.PDU;
+import org.snmp4j.Snmp;
+import org.snmp4j.TransportMapping;
+import org.snmp4j.event.ResponseEvent;
+import org.snmp4j.mp.SnmpConstants;
+import org.snmp4j.smi.*;
+
+import org.snmp4j.transport.DefaultUdpTransportMapping;
+
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import org.snmp4j.*;
-
-import org.snmp4j.event.ResponseEvent;
-import org.snmp4j.smi.*;
-import org.snmp4j.mp.SnmpConstants;
-import org.snmp4j.transport.DefaultUdpTransportMapping;
-
-import java.awt.*;
-import java.io.*;
-import java.util.Optional;
 
 public class MIBExtractorGUI extends Application {
 
-    private TextArea logArea; // Para exibir logs de extração
-    private File lastGeneratedFile; // Para armazenar o arquivo mais recente gerado
+    private TextArea logArea;
+    private File lastGeneratedFile;
 
     @Override
     public void start(Stage primaryStage) {
@@ -37,31 +37,45 @@ public class MIBExtractorGUI extends Application {
         TextField ipField = new TextField();
         ipField.setPromptText("Exemplo: 192.168.1.1");
 
+        Button verifyButton = new Button("Verificar MIB");
         Button extractButton = new Button("Extrair MIB");
         Button openFileButton = new Button("Exibir Arquivo");
 
-        // Configuração inicial: botão de exibir desativado
         openFileButton.setDisable(true);
 
         logArea = new TextArea();
         logArea.setEditable(false);
 
-        // Ação para o botão de extração
+        // Ação para verificar a MIB antes da extração
+        verifyButton.setOnAction(event -> {
+            String ip = ipField.getText();
+            if (ip.isEmpty()) {
+                showMessage("Erro: Por favor, insira um IP válido.", Alert.AlertType.ERROR);
+            } else {
+                boolean isReachable = verifyMIB(ip);
+                if (isReachable) {
+                    showMessage("Conexão SNMP bem-sucedida!", Alert.AlertType.INFORMATION);
+                } else {
+                    showMessage("Falha na conexão SNMP!", Alert.AlertType.ERROR);
+                }
+            }
+        });
+
+        // Ação para extração da MIB (snmpwalk)
         extractButton.setOnAction(event -> {
             String ip = ipField.getText();
             if (ip.isEmpty()) {
                 showMessage("Erro: Por favor, insira um IP válido.", Alert.AlertType.ERROR);
             } else {
                 extractMIB(ip);
-                openFileButton.setDisable(lastGeneratedFile == null); // Ativa o botão se o arquivo foi gerado
+                openFileButton.setDisable(lastGeneratedFile == null);
             }
         });
 
-        // Ação para o botão de abrir arquivo
         openFileButton.setOnAction(event -> openGeneratedFile(primaryStage));
 
         // Layout
-        HBox buttonBox = new HBox(10, extractButton, openFileButton);
+        HBox buttonBox = new HBox(10, verifyButton, extractButton, openFileButton);
         VBox layout = new VBox(10);
         layout.setPadding(new Insets(15));
         layout.getChildren().addAll(label, ipField, buttonBox, logArea);
@@ -71,31 +85,15 @@ public class MIBExtractorGUI extends Application {
         primaryStage.show();
     }
 
-    private void extractMIB(String ip) {
-        logArea.clear(); // Limpa o log para uma nova execução
-        logArea.appendText("Iniciando extração de MIB para o IP: " + ip + "\n");
+    private boolean verifyMIB(String ip) {
+        logArea.clear();
+        logArea.appendText("Verificando conectividade SNMP para o IP: " + ip + "\n");
 
         try {
-            // Cria a pasta de saída se não existir
-            File directory = new File("output");
-            if (!directory.exists()) {
-                directory.mkdir();
-            }
-
-            // Caminho do arquivo de saída
-            String filePath = "output/" + ip.replace(".", "_") + ".txt";
-            lastGeneratedFile = new File(filePath);
-            FileWriter fileWriter = new FileWriter(lastGeneratedFile);
-
-            // Escreve o IP no arquivo de saída
-            fileWriter.write("IP da impressora: " + ip + "\n");
-
-            // Configuração SNMP
             TransportMapping<UdpAddress> transport = new DefaultUdpTransportMapping();
             Snmp snmp = new Snmp(transport);
             transport.listen();
 
-            // Configuração do alvo
             Address targetAddress = GenericAddress.parse("udp:" + ip + "/161");
             CommunityTarget target = new CommunityTarget();
             target.setCommunity(new OctetString("public"));
@@ -104,14 +102,63 @@ public class MIBExtractorGUI extends Application {
             target.setTimeout(1500);
             target.setVersion(SnmpConstants.version2c);
 
-            // Criação do PDU
             PDU pdu = new PDU();
-            pdu.add(new VariableBinding(new OID("1.3.6.1.2.1"))); // OID de exemplo para extrair a MIB
-            pdu.setType(PDU.GETNEXT);
+            pdu.add(new VariableBinding(new OID("1.3.6.1.2.1.1.1.0")));
+            pdu.setType(PDU.GET);
 
-            // Envio da requisição SNMP
+            ResponseEvent response = snmp.get(pdu, target);
+            snmp.close();
+
+            if (response.getResponse() == null) {
+                logArea.appendText("Nenhuma resposta SNMP recebida.\n");
+                return false;
+            } else {
+                logArea.appendText("Resposta SNMP recebida: " + response.getResponse().get(0).getVariable() + "\n");
+                return true;
+            }
+
+        } catch (IOException e) {
+            logArea.appendText("Erro ao conectar via SNMP: " + e.getMessage() + "\n");
+            return false;
+        }
+    }
+
+    private void extractMIB(String ip) {
+        logArea.clear();
+        logArea.appendText("Executando snmpwalk na impressora " + ip + "...\n");
+
+        try {
+            File directory = new File("output");
+            if (!directory.exists()) {
+                directory.mkdir();
+            }
+
+            String filePath = "output/" + ip.replace(".", "_") + ".txt";
+            lastGeneratedFile = new File(filePath);
+            FileWriter fileWriter = new FileWriter(lastGeneratedFile);
+            fileWriter.write("SNMP Walk - Impressora IP: " + ip + "\n\n");
+
+            TransportMapping<UdpAddress> transport = new DefaultUdpTransportMapping();
+            Snmp snmp = new Snmp(transport);
+            transport.listen();
+
+            Address targetAddress = GenericAddress.parse("udp:" + ip + "/161");
+            CommunityTarget<UdpAddress> target = new CommunityTarget<>();
+            target.setCommunity(new OctetString("public"));
+            target.setAddress((UdpAddress) targetAddress);
+            target.setRetries(2);
+            target.setTimeout(1500);
+            target.setVersion(SnmpConstants.version2c);
+
+            OID baseOid = new OID("1.3.6.1.2.1"); // Início da MIB
+            OID currentOid = new OID(baseOid);
+
             boolean finished = false;
             while (!finished) {
+                PDU pdu = new PDU();
+                pdu.add(new VariableBinding(currentOid));
+                pdu.setType(PDU.GETNEXT);
+
                 ResponseEvent response = snmp.getNext(pdu, target);
                 PDU responsePDU = response.getResponse();
 
@@ -119,50 +166,38 @@ public class MIBExtractorGUI extends Application {
                     logArea.appendText("Fim da MIB ou nenhuma resposta.\n");
                     finished = true;
                 } else {
-                    for (VariableBinding vb : responsePDU.getVariableBindings()) {
-                        String line = vb.getOid() + " = " + vb.getVariable();
-                        logArea.appendText(line + "\n");
-                        fileWriter.write(line + "\n");
-                        pdu.clear();
-                        pdu.add(new VariableBinding(vb.getOid()));
-                    }
-                    // Verifica se o próximo OID está fora do escopo da MIB
-                    if (!responsePDU.get(0).getOid().startsWith(new OID("1.3.6.1.2.1"))) {
+                    VariableBinding vb = responsePDU.get(0);
+                    OID nextOid = vb.getOid();
+
+                    if (!nextOid.startsWith(baseOid)) {
                         finished = true;
+                        break;
                     }
+
+                    String value = vb.getVariable().toString();
+                    String line = nextOid + " = " + value;
+                    logArea.appendText(line + "\n");
+                    fileWriter.write(line + "\n");
+
+                    currentOid = nextOid;
                 }
             }
 
-            // Encerramento do SNMP
             snmp.close();
             fileWriter.close();
-
-            logArea.appendText("MIB extraída e salva no arquivo: " + filePath + "\n");
-            showMessage("Extração concluída com sucesso!", Alert.AlertType.INFORMATION);
+            showMessage("Extração concluída! Arquivo salvo em: " + filePath, Alert.AlertType.INFORMATION);
 
         } catch (IOException e) {
-            logArea.appendText("Erro: " + e.getMessage() + "\n");
             showMessage("Erro ao extrair a MIB: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
     private void openGeneratedFile(Stage stage) {
         if (lastGeneratedFile != null && lastGeneratedFile.exists()) {
-            try{
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Abrir Arquivo Gerado");
-            fileChooser.setInitialDirectory(lastGeneratedFile.getParentFile());
-            fileChooser.setInitialFileName(lastGeneratedFile.getName());
-
-            // Permitir ao usuário abrir ou exibir o arquivo manualmente
-            Optional<File> selectedFile = Optional.ofNullable(fileChooser.showOpenDialog(stage));
-
-            selectedFile.ifPresent(file -> logArea.appendText("Exibindo conteúdo de: " + file.getPath() + "\n"));
+            try {
                 Desktop.getDesktop().open(lastGeneratedFile);
-                logArea.appendText("Arquivo aberto: " + lastGeneratedFile.getPath() + "\n");
             } catch (IOException e) {
-                logArea.appendText("Erro ao abrir o arquivo: " + e.getMessage() + "\n");
-                showMessage("Erro ao abrir o arquivo.", Alert.AlertType.ERROR);
+                showMessage("Erro ao abrir o arquivo: " + e.getMessage(), Alert.AlertType.ERROR);
             }
         } else {
             showMessage("Nenhum arquivo gerado para exibir.", Alert.AlertType.WARNING);

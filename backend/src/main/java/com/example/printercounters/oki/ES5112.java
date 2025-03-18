@@ -1,4 +1,4 @@
-package com.example.printercounters.hp;
+package com.example.printercounters.oki;
 
 import java.io.IOException;
 import java.security.cert.X509Certificate;
@@ -12,6 +12,7 @@ import javax.net.ssl.X509TrustManager;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
@@ -28,41 +29,40 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 
-public class E52645Flow extends PrinterModel {
+public class ES5112 extends PrinterModel {
+
     private Snmp snmp;
 
-    public E52645Flow(String ip, TextField macField, TextField serialField, TextField nameprinterField, TextArea webInfoArea) {
+    public ES5112(String ip, TextField macField, TextField serialField, TextField nameprinterField, TextArea webInfoArea) {
         super(ip, macField, serialField, nameprinterField, webInfoArea);
-        try {
-            this.snmp = new Snmp(new DefaultUdpTransportMapping());
-            this.snmp.listen();
-        } catch (IOException e) {
-            System.out.println("Erro ao inicializar SNMP: " + e.getMessage());
+
+            try {
+                this.snmp = new Snmp(new DefaultUdpTransportMapping());
+                this.snmp.listen();
+            } catch (IOException e) {
+                System.out.println("Erro ao inicializar SNMP: " + e.getMessage());
+            }
         }
-    }
-
-    @Override
-    public String getMacAddress() {
-        return getSnmpValue("1.3.6.1.2.1.2.2.1.6.2", snmp, null); // OID de MAC Address para este modelo
-    }
-
-    @Override
-    public String getSerialNumber() {
-        return getSnmpValue("1.3.6.1.2.1.43.5.1.1.17.1", snmp, null); // OID do número de série
-    }
-
-    @Override
-    public String getWebCounters() {
-        return getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, null); // OID do contador de páginas
-    }
-
+    
+        @Override
+        public String getMacAddress() {
+            return getSnmpValue("1.3.6.1.4.1.2001.1.2.1.1.140.0", snmp, null); // OID de MAC Address para este modelo
+        }
+    
+        @Override
+        public String getSerialNumber() {
+            return getSnmpValue("1.3.6.1.2.1.43.5.1.1.17.1", snmp, null); // OID do número de série
+        }
+    
+        @Override
+        public String getWebCounters() {
+            return getSnmpValue("1.3.6.1.2.1.43.5.1.1.16.1", snmp, null); // OID do contador de páginas
+        }
+        
 
     @Override
     public void fetchPrinterInfo() {
         try {
-            Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
-            snmp.listen();
-
             CommunityTarget<UdpAddress> target = new CommunityTarget<>();
             target.setCommunity(new OctetString("public"));
             target.setAddress(new UdpAddress(ip + "/161"));
@@ -70,29 +70,42 @@ public class E52645Flow extends PrinterModel {
             target.setTimeout(3000);
             target.setVersion(org.snmp4j.mp.SnmpConstants.version2c);
 
-            macField.setText(getSnmpValue("1.3.6.1.2.1.2.2.1.6.2", snmp, target));
+            macField.setText(getSnmpValue("1.3.6.1.4.1.2001.1.2.1.1.140.0", snmp, target));
             serialField.setText(getSnmpValue("1.3.6.1.2.1.43.5.1.1.17.1", snmp, target));
-            nameprinterField.setText(getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, target));
+            nameprinterField.setText(getSnmpValue("1.3.6.1.2.1.43.5.1.1.16.1", snmp, target)); // Nome da impressora
 
-            snmp.close();
-        } catch (IOException e) {
+        } catch (Exception e) {
             macField.setText("Erro");
             serialField.setText("Erro");
             nameprinterField.setText("Erro");
-            showMessage("Erro ao buscar informações SNMP.", Alert.AlertType.ERROR);
+            showMessage("Erro ao buscar informações SNMP: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
     @Override
     public void fetchWebPageData() {
         try {
-            // URL da página web
-            String url = "https://" + ip + "/hp/device/InternalPages/Index?id=UsagePage";
-
-            // Obtém os dados da página web
-            Map<String, String> webData = getWebPageData(url);
-
-            // Exibe as informações na área de texto
+            String url = "https://" + ip + "/count.htm";
+            disableSSLCertificateChecking();
+    
+            Document doc = Jsoup.connect(url).get();
+            Map<String, String> webData = new HashMap<>();
+    
+            // Capturar o nome da impressora pelo título da página
+            String printerName = doc.title();
+            nameprinterField.setText(printerName);
+    
+            // Buscar contadores de impressão
+            Element geral = doc.getElementById("PRINT_COUNT");
+            webData.put("Contagem Total", geral != null ? geral.text() : "Não encontrado");
+    
+            Element bandeja1 = doc.getElementById("TRAY_1");
+            webData.put("Bandeja 1", bandeja1 != null ? bandeja1.text() : "Não encontrado");
+    
+            Element bandejaMultiuso = doc.getElementById("MP_TRAY");
+            webData.put("Bandeja Multiuso", bandejaMultiuso != null ? bandejaMultiuso.text() : "Não encontrado");
+    
+            // Exibir dados na interface
             if (webData.isEmpty()) {
                 webInfoArea.setText("Nenhuma informação encontrada na página web.");
             } else {
@@ -104,23 +117,22 @@ public class E52645Flow extends PrinterModel {
             webInfoArea.setText("Erro ao acessar a página web: " + e.getMessage());
         }
     }
-
+    
     private Map<String, String> getWebPageData(String url) throws IOException {
         disableSSLCertificateChecking();
 
-        // Conecta à página web e extrai o conteúdo
         Document doc = Jsoup.connect(url).get();
         Map<String, String> webData = new HashMap<>();
 
-        // Extrai informações da página utilizando o id especificado
-        webData.put("Geral",
-        doc.select("#UsagePage\\.EquivalentImpressionsTable\\.Total\\.Total").text());
-        webData.put("Impressão P$B",
-        doc.select("#UsagePage\\.ImpressionsByMediaSizeTable\\.Print\\.TotalTotal").text());
-        webData.put("Copia P&B",
-        doc.select("#UsagePage\\.ImpressionsByMediaSizeTable\\.Copy\\.TotalTotal").text());
-        webData.put("Digitalização Geral",
-        doc.select("#UsagePage\\.ScanCountsDestinationTable\\.Send\\.Value").text());
+        // Buscar contadores de impressão
+        Element geral = doc.getElementById("PRINT_COUNT");
+        webData.put("Contagem Total", geral != null ? geral.text() : "Não encontrado");
+
+        Element bandeja1 = doc.getElementById("TRAY_1");
+        webData.put("Bandeja 1", bandeja1 != null ? bandeja1.text() : "Não encontrado");
+
+        Element bandejaMultiuso = doc.getElementById("MP_TRAY");
+        webData.put("Bandeja Multiuso", bandejaMultiuso != null ? bandejaMultiuso.text() : "Não encontrado");
 
         return webData;
     }
@@ -160,10 +172,12 @@ public class E52645Flow extends PrinterModel {
             if (response != null && response.getResponse() != null) {
                 return response.getResponse().get(0).getVariable().toString();
             }
+        } catch (IOException e) {
+            System.err.println("Erro de IO ao buscar OID " + oid + ": " + e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Erro ao buscar OID " + oid + ": " + e.getMessage());
         }
-        return "Desconhecido";
+        return "Erro na consulta";
     }
 
     private void showMessage(String message, Alert.AlertType type) {

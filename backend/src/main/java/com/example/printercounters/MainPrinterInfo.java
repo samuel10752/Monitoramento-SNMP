@@ -1,6 +1,7 @@
 package com.example.printercounters;
 
 import com.example.printercounters.controllers.PrinterInfoDisplay;
+
 import javafx.application.Application;
 
 public class MainPrinterInfo {

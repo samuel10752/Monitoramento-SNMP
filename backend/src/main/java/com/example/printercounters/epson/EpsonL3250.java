@@ -29,10 +29,33 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 
 public class EpsonL3250 extends PrinterModel {
-
+    private Snmp snmp;
+    
     public EpsonL3250(String ip, TextField macField, TextField serialField, TextField nameprinterField, TextArea webInfoArea) {
         super(ip, macField, serialField, nameprinterField, webInfoArea);
+        try {
+            this.snmp = new Snmp(new DefaultUdpTransportMapping());
+            this.snmp.listen();
+        } catch (IOException e) {
+            System.out.println("Erro ao inicializar SNMP: " + e.getMessage());
+        }
     }
+
+    @Override
+    public String getMacAddress() {
+        return getSnmpValue("1.3.6.1.2.1.2.2.1.6.1", snmp, null); // OID de MAC Address para este modelo
+    }
+
+    @Override
+    public String getSerialNumber() {
+        return getSnmpValue("1.3.6.1.2.1.43.5.1.1.17.1", snmp, null); // OID do número de série
+    }
+
+    @Override
+    public String getWebCounters() {
+        return getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, null); // OID do contador de páginas
+    }
+    
 
     @Override
     public void fetchPrinterInfo() {
