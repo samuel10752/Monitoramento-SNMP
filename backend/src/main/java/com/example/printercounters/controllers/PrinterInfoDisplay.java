@@ -1,10 +1,16 @@
 package com.example.printercounters.controllers;
 
-import com.example.printercounters.epson.EpsonL3250;
+import com.example.printercounters.hp.InfoHP;
+
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -87,9 +93,18 @@ public class PrinterInfoDisplay extends Application {
         }
 
         String ip = ipField.getText();
-        EpsonL3250 printer = new EpsonL3250(ip, macField, serialField, brandField, webInfoArea);
-        printer.fetchPrinterInfo();
-        printer.fetchWebPageData();
+
+        // Detecta a marca usando InfoHP (que trata apenas de HP)
+        String brand = InfoHP.detectPrinterBrand(ip);
+        brandField.setText(brand);
+
+        if (brand.equals("HP")) {
+            PrinterModel printer = InfoHP.createHPPrinter(ip, macField, serialField, brandField, webInfoArea);
+            printer.fetchPrinterInfo();
+            printer.fetchWebPageData();
+        } else {
+            showMessage("Marca da impressora não reconhecida ou não é HP.", Alert.AlertType.ERROR);
+        }
     }
 
     private void showMessage(String message, Alert.AlertType type) {
