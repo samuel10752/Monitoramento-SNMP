@@ -5,6 +5,10 @@ import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.example.printercounters.controllers.PrinterModel;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -22,40 +26,29 @@ import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
-import com.example.printercounters.controllers.PrinterModel;
-
 import javafx.scene.control.Alert;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
 
 public class EpsonL3250 extends PrinterModel {
-    private Snmp snmp;
-    
+
     public EpsonL3250(String ip, TextField macField, TextField serialField, TextField nameprinterField, TextArea webInfoArea) {
         super(ip, macField, serialField, nameprinterField, webInfoArea);
-        try {
-            this.snmp = new Snmp(new DefaultUdpTransportMapping());
-            this.snmp.listen();
-        } catch (IOException e) {
-            System.out.println("Erro ao inicializar SNMP: " + e.getMessage());
-        }
-    }
 
-    @Override
-    public String getMacAddress() {
-        return getSnmpValue("1.3.6.1.2.1.2.2.1.6.1", snmp, null); // OID de MAC Address para este modelo
-    }
-
-    @Override
-    public String getSerialNumber() {
-        return getSnmpValue("1.3.6.1.2.1.43.5.1.1.17.1", snmp, null); // OID do número de série
     }
 
     @Override
     public String getWebCounters() {
-        return getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, null); // OID do contador de páginas
+        return "Contadores Epson"; // Simulação
     }
-    
+
+    @Override
+    public String getSerialNumber() {
+        return "SN123456"; // Simulação
+    }
+
+    @Override
+    public String getMacAddress() {
+        return macField.getText() != null ? macField.getText() : "MAC Desconhecido";
+    }
 
     @Override
     public void fetchPrinterInfo() {
@@ -86,13 +79,9 @@ public class EpsonL3250 extends PrinterModel {
     @Override
     public void fetchWebPageData() {
         try {
-            // URL da página web
             String url = "https://" + ip + "/PRESENTATION/ADVANCED/INFO_MENTINFO/TOP";
-
-            // Obtém os dados da página web
             Map<String, String> webData = getWebPageData(url);
 
-            // Exibe as informações na área de texto
             if (webData.isEmpty()) {
                 webInfoArea.setText("Nenhuma informação encontrada na página web.");
             } else {
@@ -107,18 +96,12 @@ public class EpsonL3250 extends PrinterModel {
 
     private Map<String, String> getWebPageData(String url) throws IOException {
         disableSSLCertificateChecking();
-
-        // Conecta à página web e extrai o conteúdo
         Document doc = Jsoup.connect(url).get();
         Map<String, String> webData = new HashMap<>();
 
-        // Extrai informações da página
-        webData.put("Número total de páginas",
-                doc.select("dt:contains(Total Number of Pages) + dd .preserve-white-space").text());
-        webData.put("Número de páginas P&B",
-                doc.select("dt:contains(Total Number of B&W Pages) + dd .preserve-white-space").text());
-        webData.put("Número de páginas coloridas",
-                doc.select("dt:contains(Total Number of Color Pages) + dd .preserve-white-space").text());
+        webData.put("Número total de páginas", doc.select("dt:contains(Total Number of Pages) + dd .preserve-white-space").text());
+        webData.put("Número de páginas P&B", doc.select("dt:contains(Total Number of B&W Pages) + dd .preserve-white-space").text());
+        webData.put("Número de páginas coloridas", doc.select("dt:contains(Total Number of Color Pages) + dd .preserve-white-space").text());
         webData.put("Scanner P&B", doc.select("dt:contains(B&W Scan) + dd .preserve-white-space").text());
         webData.put("Scanner Color", doc.select("dt:contains(Color Scan) + dd .preserve-white-space").text());
 
@@ -140,7 +123,6 @@ public class EpsonL3250 extends PrinterModel {
                     }
                 }
             };
-
             SSLContext sc = SSLContext.getInstance("SSL");
             sc.init(null, trustAllCerts, new java.security.SecureRandom());
             HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
@@ -155,16 +137,20 @@ public class EpsonL3250 extends PrinterModel {
             PDU pdu = new PDU();
             pdu.add(new VariableBinding(new OID(oid)));
             pdu.setType(PDU.GET);
-
+    
             ResponseEvent response = snmp.get(pdu, target);
             if (response != null && response.getResponse() != null) {
                 return response.getResponse().get(0).getVariable().toString();
+            } else {
+                System.err.println("Erro: SNMP response null para OID " + oid);
             }
         } catch (Exception e) {
+            System.err.println("Erro ao obter OID " + oid + ": " + e.getMessage());
             e.printStackTrace();
         }
         return "Desconhecido";
     }
+    
 
     private void showMessage(String message, Alert.AlertType type) {
         Alert alert = new Alert(type);
