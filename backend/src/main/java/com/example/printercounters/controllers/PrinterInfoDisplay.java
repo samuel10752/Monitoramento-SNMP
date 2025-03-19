@@ -91,21 +91,22 @@ public class PrinterInfoDisplay extends Application {
             showMessage("Erro: Por favor, insira um IP válido.", Alert.AlertType.ERROR);
             return;
         }
-
+    
         String ip = ipField.getText();
-
-        // Detecta a marca usando InfoHP (que trata apenas de HP)
-        String brand = InfoHP.detectPrinterBrand(ip);
-        brandField.setText(brand);
-
-        if (brand.equals("HP")) {
-            PrinterModel printer = InfoHP.createHPPrinter(ip, macField, serialField, brandField, webInfoArea);
-            printer.fetchPrinterInfo();
-            printer.fetchWebPageData();
-        } else {
-            showMessage("Marca da impressora não reconhecida ou não é HP.", Alert.AlertType.ERROR);
-        }
+    
+        // Define a marca como "HP" sem usar detecção via SNMP
+        brandField.setText("HP");
+    
+        // Define o modelo (por exemplo, "HP4303"). 
+        // Se tiver um ComboBox, substitua por: String selectedModel = modelComboBox.getValue();
+        String selectedModel = "HP4303";
+    
+        PrinterModel printer = InfoHP.createHPPrinter(ip, selectedModel, macField, serialField, brandField, webInfoArea);
+        printer.fetchPrinterInfo();
+        printer.fetchWebPageData();
     }
+    
+    
 
     private void showMessage(String message, Alert.AlertType type) {
         Alert alert = new Alert(type);

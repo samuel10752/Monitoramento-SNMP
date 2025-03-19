@@ -1,51 +1,58 @@
 package com.example.printercounters.hp;
-
-import com.example.printercounters.controllers.PrinterModel;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
 import org.snmp4j.CommunityTarget;
+import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
+import org.snmp4j.event.ResponseEvent;
+import org.snmp4j.smi.OID;
 import org.snmp4j.smi.OctetString;
 import org.snmp4j.smi.UdpAddress;
+import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
+
+import com.example.printercounters.controllers.PrinterModel;
+
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+
 
 public class InfoHP {
 
-    // Método para detectar a marca (usando SNMP)
-    public static String detectPrinterBrand(String ip) {
-        try {
-            String oid = "1.3.6.1.2.1.1.1.0";
-            Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
-            snmp.listen();
+    /**
+     * Cria a instância do modelo HP com base na escolha do usuário.
+     * A seleção (selectedModel) deve vir de uma interface, arquivo de configuração ou outra lógica
+     * externa à detecção via SNMP.
+     *
+     * @param ip            IP da impressora
+     * @param selectedModel Modelo selecionado (por exemplo, "HP4303", "E52645Flow", etc.)
+     * @param macField      Campo de exibição do MAC
+     * @param serialField   Campo de exibição do número de série
+     * @param brandField    Campo de exibição da marca (será definido como "HP")
+     * @param webInfoArea   Área de texto para exibição das informações web
+     * @return              Instância da classe que estende PrinterModel, de acordo com o modelo selecionado
+     */
+    public static PrinterModel createHPPrinter(String ip, String selectedModel, 
+                                                 TextField macField, TextField serialField, 
+                                                 TextField brandField, TextArea webInfoArea) {
+        // Define a marca como "HP"
+        brandField.setText("HP");
 
-            CommunityTarget<UdpAddress> target = new CommunityTarget<>();
-            target.setCommunity(new OctetString("public"));
-            target.setAddress(new UdpAddress(ip + "/161"));
-            target.setRetries(2);
-            target.setTimeout(3000);
-            target.setVersion(org.snmp4j.mp.SnmpConstants.version2c);
-
-            // Supondo que você tenha implementado getSnmpValue
-            String response = getSnmpValue(oid, snmp, target);
-            snmp.close();
-
-            if (response.toLowerCase().contains("hp")) {
-                return "HP";
-            }
-        } catch (Exception e) {
-            System.err.println("Erro ao detectar a marca da impressora: " + e.getMessage());
+        switch (selectedModel) {
+            case "HP4303":
+                return new HP4303(ip, macField, serialField, brandField, webInfoArea);
+            case "E52645Flow":
+                return new E52645Flow(ip, macField, serialField, brandField, webInfoArea);
+            // Adicione outros casos conforme novos modelos forem implementados
+            default:
+                // Caso o modelo selecionado não seja reconhecido, retorna um modelo padrão
+                return new E52645Flow(ip, macField, serialField, brandField, webInfoArea);
         }
-        return "Desconhecido";
     }
+}
 
-    // Exemplo de método para detectar o modelo específico HP
-    // Você pode usar outra OID ou lógica para identificar o modelo
+
+    // Método para detectar o modelo específico HP utilizando o OID do serial HP4303
     public static String detectPrinterModelHP(String ip) {
-        // Aqui você pode implementar a lógica para identificar o modelo HP
-        // Por exemplo, usando outra OID ou analisando o sysDescr
-        // Exemplo simplificado:
         try {
-            String oid = "1.3.6.1.2.1.1.1.0"; // ou outra OID específica
             Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
             snmp.listen();
 
@@ -56,54 +63,84 @@ public class InfoHP {
             target.setTimeout(3000);
             target.setVersion(org.snmp4j.mp.SnmpConstants.version2c);
 
-            String response = getSnmpValue(oid, snmp, target);
+            // Tenta obter o valor do OID específico do serial da HP4303
+            String serialHP4303 = getSnmpValue("1.3.6.1.4.1.11.2.3.9.4.2.1.1.3.3.0", snmp, target);
             snmp.close();
 
-            // Verifica o conteúdo do sysDescr para identificar o modelo
-            if (response.toLowerCase().contains("e52645flow")) {
-                return "E52645Flow";
-            } else if (response.toLowerCase().contains("HP4303")) {
+            if (serialHP4303 != null && !serialHP4303.equals("Desconhecido") && !serialHP4303.isEmpty()) {
                 return "HP4303";
+            } else {
+                // Se não encontrou valor no OID específico, você pode assumir outro modelo ou retornar "Desconhecido".
+                return "E52645Flow";
             }
-            // Adicione mais condições conforme os modelos HP que você tiver
         } catch (Exception e) {
             System.err.println("Erro ao detectar o modelo HP: " + e.getMessage());
         }
         return "Desconhecido";
     }
 
-    // Método que cria a instância correta dos modelos HP
+
+    
+    // Método que cria a instância correta dos modelos HP com base no modelo detectado
     public static PrinterModel createHPPrinter(String ip, TextField macField, TextField serialField, TextField brandField, TextArea webInfoArea) {
         String model = detectPrinterModelHP(ip);
         switch (model) {
+            case "HP4303":
+                return new HP4303(ip, macField, serialField, brandField, webInfoArea);
             case "E52645Flow":
                 return new E52645Flow(ip, macField, serialField, brandField, webInfoArea);
-            case "HP4303":
-                // Supondo que você tenha uma classe ModeloHP2 que estenda PrinterModel
-                return new HP4303(ip, macField, serialField, brandField, webInfoArea);
             default:
-                // Se não identificar um modelo específico, pode instanciar um modelo padrão HP
                 return new E52645Flow(ip, macField, serialField, brandField, webInfoArea);
         }
     }
 
-    // Exemplo de implementação do método getSnmpValue (ou você pode extrair para uma classe utilitária)
+    // Método estático para realizar um SNMP GET e retornar o valor
     protected static String getSnmpValue(String oid, Snmp snmp, CommunityTarget<?> target) {
         try {
-            org.snmp4j.PDU pdu = new org.snmp4j.PDU();
-            pdu.add(new org.snmp4j.smi.VariableBinding(new org.snmp4j.smi.OID(oid)));
-            pdu.setType(org.snmp4j.PDU.GET);
+            PDU pdu = new PDU();
+            pdu.add(new VariableBinding(new OID(oid)));
+            pdu.setType(PDU.GET);
 
-            org.snmp4j.event.ResponseEvent response = snmp.get(pdu, target);
+            ResponseEvent response = snmp.get(pdu, target);
             if (response != null && response.getResponse() != null) {
-                return response.getResponse().get(0).getVariable().toString();
+                VariableBinding vb = response.getResponse().get(0);
+                System.out.println("Requisição para OID " + vb.getOid() + " retornou: " + vb.getVariable());
+                return vb.getVariable().toString();
+            } else {
+                System.err.println("Nenhuma resposta para OID " + oid);
             }
         } catch (Exception e) {
-            System.err.println("Erro ao obter OID " + oid + ": " + e.getMessage());
             e.printStackTrace();
         }
         return "Desconhecido";
     }
-    
-    // Você pode incluir outros métodos específicos para HP se necessário.
+
+    // Método estático para realizar um SNMP walk a partir de um OID base e retornar o primeiro valor encontrado
+    private static String snmpWalkForValue(String baseOid, Snmp snmp, CommunityTarget<?> target) {
+        try {
+            OID rootOid = new OID(baseOid);
+            OID currentOid = new OID(rootOid);
+
+            while (true) {
+                PDU pdu = new PDU();
+                pdu.add(new VariableBinding(currentOid));
+                pdu.setType(PDU.GETNEXT);
+
+                ResponseEvent response = snmp.getNext(pdu, target);
+                PDU responsePDU = response.getResponse();
+                if (responsePDU == null) {
+                    break;
+                }
+                VariableBinding vb = responsePDU.get(0);
+                OID nextOid = vb.getOid();
+                if (!nextOid.startsWith(rootOid)) {
+                    break;
+                }
+                return vb.getVariable().toString();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "Desconhecido";
+    }
 }

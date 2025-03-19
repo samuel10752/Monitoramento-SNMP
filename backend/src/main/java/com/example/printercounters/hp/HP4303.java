@@ -7,9 +7,9 @@ import java.util.Map;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-import javax.net.ssl.SSLSocketFactory;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -37,19 +37,19 @@ public class HP4303 extends PrinterModel {
 
     @Override
     public String getWebCounters() {
-        return "Contadores Epson"; // Simulação
+        return "Contadores HP4303"; // Ajuste conforme a necessidade
     }
 
     @Override
     public String getSerialNumber() {
-        return "SN123456"; // Simulação
+        // Usa o OID correto para capturar o serial da HP4303
+        return getSnmpValue("1.3.6.1.4.1.11.2.3.9.4.2.1.1.3.3.0", ip);
     }
 
     @Override
     public String getMacAddress() {
         return macField.getText() != null ? macField.getText() : "MAC Desconhecido";
     }
-    
 
     @Override
     public void fetchPrinterInfo() {
@@ -64,8 +64,9 @@ public class HP4303 extends PrinterModel {
             target.setTimeout(3000);
             target.setVersion(org.snmp4j.mp.SnmpConstants.version2c);
 
+            // Busca os valores utilizando os OIDs corretos
             macField.setText(getSnmpValue("1.3.6.1.2.1.2.2.1.6.2", snmp, target));
-            serialField.setText(getSnmpValue("1.3.6.1.2.1.43.5.1.1.17.1", snmp, target));
+            serialField.setText(getSnmpValue("1.3.6.1.4.1.11.2.3.9.4.2.1.1.3.3.0", snmp, target));
             nameprinterField.setText(getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, target));
 
             snmp.close();
@@ -80,19 +81,12 @@ public class HP4303 extends PrinterModel {
     @Override
     public void fetchWebPageData() {
         try {
-            // URL da página web
             String url = "https://" + ip + "/hp/device/InternalPages/Index?id=UsagePage";
-    
-            // Testa se a página está acessível antes de tentar buscar os dados
             if (!isWebPageAccessible(url)) {
                 webInfoArea.setText("Erro: A página da impressora não está acessível.");
                 return;
             }
-    
-            // Obtém os dados da página web
             Map<String, String> webData = getWebPageData(url);
-    
-            // Exibe as informações na área de texto
             if (webData.isEmpty()) {
                 webInfoArea.setText("Nenhuma informação encontrada na página web.");
             } else {
@@ -108,7 +102,7 @@ public class HP4303 extends PrinterModel {
     private SSLSocketFactory getSSLSocketFactory() {
         try {
             SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, new TrustManager[]{new X509TrustManager() {
+            sslContext.init(null, new TrustManager[]{ new X509TrustManager() {
                 public void checkClientTrusted(X509Certificate[] chain, String authType) {}
                 public void checkServerTrusted(X509Certificate[] chain, String authType) {}
                 public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
@@ -121,25 +115,17 @@ public class HP4303 extends PrinterModel {
 
     private Map<String, String> getWebPageData(String url) throws IOException {
         disableSSLCertificateChecking();
-    
         Document doc = Jsoup.connect(url)
             .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
             .ignoreHttpErrors(true)
             .ignoreContentType(true)
             .sslSocketFactory(getSSLSocketFactory())
             .get();
-    
         Map<String, String> webData = new HashMap<>();
-        
-        webData.put("Geral",
-                doc.select("[id=\"UsagePage.EquivalentImpressionsTable.Total.Total\"]").text());
-        webData.put("Impressão P$B",
-                doc.select("[id=\"UsagePage.ImpressionsByMediaSizeTable.Print.TotalTotal\"]").text());
-        webData.put("Copia P&B",
-                doc.select("[id=\"UsagePage.ImpressionsByMediaSizeTable.Copy.TotalTotal\"]").text());
-        webData.put("Digitalização Geral",
-                doc.select("[id=\"UsagePage.ScanCountsDestinationTable.Send.Value\"]").text());
-    
+        webData.put("Geral", doc.select("[id=\"UsagePage.EquivalentImpressionsTable.Total.Total\"]").text());
+        webData.put("Impressão P$B", doc.select("[id=\"UsagePage.ImpressionsByMediaSizeTable.Print.TotalTotal\"]").text());
+        webData.put("Copia P&B", doc.select("[id=\"UsagePage.ImpressionsByMediaSizeTable.Copy.TotalTotal\"]").text());
+        webData.put("Digitalização Geral", doc.select("[id=\"UsagePage.ScanCountsDestinationTable.Send.Value\"]").text());
         return webData;
     }
 
@@ -148,13 +134,11 @@ public class HP4303 extends PrinterModel {
             disableSSLCertificateChecking();
             HttpsURLConnection connection = (HttpsURLConnection) new java.net.URL(url).openConnection();
             connection.setRequestMethod("GET");
-            connection.setConnectTimeout(5000);  // Tempo limite de 5 segundos
+            connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
             connection.connect();
-            
             int responseCode = connection.getResponseCode();
             connection.disconnect();
-    
             return (responseCode == 200);
         } catch (Exception e) {
             System.err.println("Erro ao verificar acesso à página: " + e.getMessage());
@@ -162,16 +146,36 @@ public class HP4303 extends PrinterModel {
         }
     }
 
+    // Método para realizar um SNMP GET usando uma instância SNMP já configurada
     protected String getSnmpValue(String oid, Snmp snmp, CommunityTarget<?> target) {
         try {
             PDU pdu = new PDU();
             pdu.add(new VariableBinding(new OID(oid)));
             pdu.setType(PDU.GET);
-
             ResponseEvent response = snmp.get(pdu, target);
             if (response != null && response.getResponse() != null) {
                 return response.getResponse().get(0).getVariable().toString();
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "Desconhecido";
+    }
+
+    // Método auxiliar para facilitar SNMP GET passando o IP
+    private String getSnmpValue(String oid, String ip) {
+        try {
+            Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
+            snmp.listen();
+            CommunityTarget<UdpAddress> target = new CommunityTarget<>();
+            target.setCommunity(new OctetString("public"));
+            target.setAddress(new UdpAddress(ip + "/161"));
+            target.setRetries(2);
+            target.setTimeout(3000);
+            target.setVersion(org.snmp4j.mp.SnmpConstants.version2c);
+            String result = getSnmpValue(oid, snmp, target);
+            snmp.close();
+            return result;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -185,4 +189,7 @@ public class HP4303 extends PrinterModel {
         alert.setContentText(message);
         alert.showAndWait();
     }
+    
+// Implemente a lógica de desabilitar a verificação de certificados SSL, se necessário.
+
 }

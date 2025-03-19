@@ -125,72 +125,73 @@ public class MIBExtractorGUI extends Application {
 
     private void extractMIB(String ip) {
         logArea.clear();
-        logArea.appendText("Executando snmpwalk na impressora " + ip + "...\n");
-
+        logArea.appendText("Executando snmpwalk (usando GETBULK) na impressora " + ip + "...\n");
+    
         try {
             File directory = new File("output");
             if (!directory.exists()) {
                 directory.mkdir();
             }
-
+    
             String filePath = "output/" + ip.replace(".", "_") + ".txt";
             lastGeneratedFile = new File(filePath);
             FileWriter fileWriter = new FileWriter(lastGeneratedFile);
             fileWriter.write("SNMP Walk - Impressora IP: " + ip + "\n\n");
-
+    
             TransportMapping<UdpAddress> transport = new DefaultUdpTransportMapping();
             Snmp snmp = new Snmp(transport);
             transport.listen();
-
+    
             Address targetAddress = GenericAddress.parse("udp:" + ip + "/161");
             CommunityTarget<UdpAddress> target = new CommunityTarget<>();
             target.setCommunity(new OctetString("public"));
             target.setAddress((UdpAddress) targetAddress);
-            target.setRetries(2);
-            target.setTimeout(1500);
+            target.setRetries(1);       // menos tentativas se a rede for estável
+            target.setTimeout(1000);      // timeout de 1 segundo
             target.setVersion(SnmpConstants.version2c);
-
-            OID baseOid = new OID("1.3.6.1.2.1"); // Início da MIB
+    
+            // Defina o OID base de acordo com a subárvore que deseja extrair
+            OID baseOid = new OID("1.3.6.1"); 
             OID currentOid = new OID(baseOid);
-
+    
             boolean finished = false;
             while (!finished) {
                 PDU pdu = new PDU();
                 pdu.add(new VariableBinding(currentOid));
-                pdu.setType(PDU.GETNEXT);
-
-                ResponseEvent response = snmp.getNext(pdu, target);
+                pdu.setType(PDU.GETBULK);
+                pdu.setMaxRepetitions(20); // aumentar para recuperar mais OIDs de uma vez
+    
+                ResponseEvent response = snmp.getBulk(pdu, target);
                 PDU responsePDU = response.getResponse();
-
-                if (responsePDU == null) {
+    
+                if (responsePDU == null || responsePDU.getVariableBindings().isEmpty()) {
                     logArea.appendText("Fim da MIB ou nenhuma resposta.\n");
                     finished = true;
                 } else {
-                    VariableBinding vb = responsePDU.get(0);
-                    OID nextOid = vb.getOid();
-
-                    if (!nextOid.startsWith(baseOid)) {
-                        finished = true;
-                        break;
+                    for (VariableBinding vb : responsePDU.getVariableBindings()) {
+                        OID nextOid = vb.getOid();
+                        if (!nextOid.startsWith(baseOid)) {
+                            finished = true;
+                            break;
+                        }
+                        String value = vb.getVariable().toString();
+                        String line = nextOid + " = " + value;
+                        logArea.appendText(line + "\n");
+                        fileWriter.write(line + "\n");
+                        currentOid = nextOid;
                     }
-
-                    String value = vb.getVariable().toString();
-                    String line = nextOid + " = " + value;
-                    logArea.appendText(line + "\n");
-                    fileWriter.write(line + "\n");
-
-                    currentOid = nextOid;
                 }
             }
-
+    
             snmp.close();
             fileWriter.close();
             showMessage("Extração concluída! Arquivo salvo em: " + filePath, Alert.AlertType.INFORMATION);
-
+    
         } catch (IOException e) {
             showMessage("Erro ao extrair a MIB: " + e.getMessage(), Alert.AlertType.ERROR);
         }
-    }
+    }   
+    
 
     private void openGeneratedFile(Stage stage) {
         if (lastGeneratedFile != null && lastGeneratedFile.exists()) {

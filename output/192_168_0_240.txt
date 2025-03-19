@@ -1,1 +1,2 @@
-IP da impressora: 192.168.0.240
+SNMP Walk - Impressora IP: 192.168.0.240
+
