@@ -1,4 +1,5 @@
 package com.example.printercounters.controllers;
+
 import java.security.cert.X509Certificate;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -17,6 +18,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 
 public abstract class PrinterModel {
+
     protected String ip;
     protected TextField macField;
     protected TextField serialField;
@@ -31,15 +33,18 @@ public abstract class PrinterModel {
         this.webInfoArea = webInfoArea;
     }
 
+    public abstract String getMacAddress();
+
+    public abstract String getSerialNumber();
+
+    public abstract String getWebCounters();
+
     public abstract void fetchPrinterInfo();
 
     public abstract void fetchWebPageData();
 
-        public abstract String getMacAddress();
-    public abstract String getSerialNumber();
-    public abstract String getWebCounters();
 
-    protected void disableSSLCertificateChecking() {
+protected void disableSSLCertificateChecking() {
         try {
             TrustManager[] trustAllCerts = new TrustManager[]{
                     new X509TrustManager() {
