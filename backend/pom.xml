@@ -65,11 +65,24 @@
             <artifactId>javafx-fxml</artifactId>
             <version>20</version>
         </dependency>
+        <dependencies>
+            <dependency>
+                <groupId>org.jsoup</groupId>
+                <artifactId>jsoup</artifactId>
+                <version>1.14.3</version> <!-- Use a versão mais recente -->
+            </dependency>
+            <dependency>
+                <groupId>org.snmp4j</groupId>
+                <artifactId>snmp4j</artifactId>
+                <version>3.6.6</version> <!-- Use a versão mais recente -->
+            </dependency>
+        </dependencies>
+
         <dependency>
-    <groupId>org.jsoup</groupId>
-    <artifactId>jsoup</artifactId>
-    <version>1.15.3</version> <!-- Verifique a versão mais recente no site oficial -->
-</dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.15.3</version> <!-- Verifique a versão mais recente no site oficial -->
+        </dependency>
 
 
     </dependencies>

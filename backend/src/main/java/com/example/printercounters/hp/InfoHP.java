@@ -47,7 +47,6 @@ public class InfoHP {
                 return new E52645Flow(ip, macField, serialField, brandField, webInfoArea);
         }
     }
-}
 
 
     // Método para detectar o modelo específico HP utilizando o OID do serial HP4303
