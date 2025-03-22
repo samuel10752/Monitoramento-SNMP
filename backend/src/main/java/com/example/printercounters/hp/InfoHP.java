@@ -1,4 +1,5 @@
 package com.example.printercounters.hp;
+
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
@@ -14,25 +15,27 @@ import com.example.printercounters.controllers.PrinterModel;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 
-
 public class InfoHP {
 
     /**
      * Cria a instância do modelo HP com base na escolha do usuário.
-     * A seleção (selectedModel) deve vir de uma interface, arquivo de configuração ou outra lógica
+     * A seleção (selectedModel) deve vir de uma interface, arquivo de configuração
+     * ou outra lógica
      * externa à detecção via SNMP.
      *
      * @param ip            IP da impressora
-     * @param selectedModel Modelo selecionado (por exemplo, "HP4303", "E52645Flow", etc.)
+     * @param selectedModel Modelo selecionado (por exemplo, "HP4303", "E52645Flow",
+     *                      etc.)
      * @param macField      Campo de exibição do MAC
      * @param serialField   Campo de exibição do número de série
      * @param brandField    Campo de exibição da marca (será definido como "HP")
      * @param webInfoArea   Área de texto para exibição das informações web
-     * @return              Instância da classe que estende PrinterModel, de acordo com o modelo selecionado
+     * @return Instância da classe que estende PrinterModel, de acordo com o modelo
+     *         selecionado
      */
-    public static PrinterModel createHPPrinter(String ip, String selectedModel, 
-                                                 TextField macField, TextField serialField, 
-                                                 TextField brandField, TextArea webInfoArea) {
+    public static PrinterModel createHPPrinter(String ip, String selectedModel,
+            TextField macField, TextField serialField,
+            TextField brandField, TextArea webInfoArea) {
         // Define a marca como "HP"
         brandField.setText("HP");
 
@@ -47,7 +50,6 @@ public class InfoHP {
                 return new E52645Flow(ip, macField, serialField, brandField, webInfoArea);
         }
     }
-
 
     // Método para detectar o modelo específico HP utilizando o OID do serial HP4303
     public static String detectPrinterModelHP(String ip) {
@@ -69,7 +71,8 @@ public class InfoHP {
             if (serialHP4303 != null && !serialHP4303.equals("Desconhecido") && !serialHP4303.isEmpty()) {
                 return "HP4303";
             } else {
-                // Se não encontrou valor no OID específico, você pode assumir outro modelo ou retornar "Desconhecido".
+                // Se não encontrou valor no OID específico, você pode assumir outro modelo ou
+                // retornar "Desconhecido".
                 return "E52645Flow";
             }
         } catch (Exception e) {
@@ -78,10 +81,10 @@ public class InfoHP {
         return "Desconhecido";
     }
 
-
-    
-    // Método que cria a instância correta dos modelos HP com base no modelo detectado
-    public static PrinterModel createHPPrinter(String ip, TextField macField, TextField serialField, TextField brandField, TextArea webInfoArea) {
+    // Método que cria a instância correta dos modelos HP com base no modelo
+    // detectado
+    public static PrinterModel createHPPrinter(String ip, TextField macField, TextField serialField,
+            TextField brandField, TextArea webInfoArea) {
         String model = detectPrinterModelHP(ip);
         switch (model) {
             case "HP4303":
@@ -114,7 +117,8 @@ public class InfoHP {
         return "Desconhecido";
     }
 
-    // Método estático para realizar um SNMP walk a partir de um OID base e retornar o primeiro valor encontrado
+    // Método estático para realizar um SNMP walk a partir de um OID base e retornar
+    // o primeiro valor encontrado
     private static String snmpWalkForValue(String baseOid, Snmp snmp, CommunityTarget<?> target) {
         try {
             OID rootOid = new OID(baseOid);
