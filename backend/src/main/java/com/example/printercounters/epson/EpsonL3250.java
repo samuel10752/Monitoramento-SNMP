@@ -133,11 +133,11 @@ public class EpsonL3250 extends PrinterModel {
 
         // Extrai os dados
         Map<String, String> webData = new LinkedHashMap<>();
-        webData.put("Geral", extractData(doc, "Total Number of Pages"));
-        webData.put("Geral P&B", extractData(doc, "Total Number of B&W Pages"));
-        webData.put("Geral Cor Total", extractData(doc, "Total Number of Color Pages"));
-        webData.put("Digitalização P&B", extractData(doc, "B&W Scan"));
-        webData.put("Digitalização Colorida", extractData(doc, "Color Scan"));
+        webData.put("Geral:", extractData(doc, "Total Number of Pages"));
+        webData.put("Geral P&B:", extractData(doc, "Total Number of B&W Pages"));
+        webData.put("Geral Cor Total:", extractData(doc, "Total Number of Color Pages"));
+        webData.put("Digitalização P&B:", extractData(doc, "B&W Scan"));
+        webData.put("Digitalização Colorida:", extractData(doc, "Color Scan"));
 
         return webData;
     }

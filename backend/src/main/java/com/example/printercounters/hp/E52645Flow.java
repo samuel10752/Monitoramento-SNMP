@@ -131,13 +131,13 @@ public class E52645Flow extends PrinterModel {
     
         Map<String, String> webData = new HashMap<>();
         
-        webData.put("Geral",
+        webData.put("Geral:",
                 doc.select("[id=\"UsagePage.EquivalentImpressionsTable.Total.Total\"]").text());
-        webData.put("Impressão P$B",
+        webData.put("Impressão P$B:",
                 doc.select("[id=\"UsagePage.ImpressionsByMediaSizeTable.Print.TotalTotal\"]").text());
-        webData.put("Copia P&B",
+        webData.put("Copia P&B:",
                 doc.select("[id=\"UsagePage.ImpressionsByMediaSizeTable.Copy.TotalTotal\"]").text());
-        webData.put("Digitalização Geral",
+        webData.put("Digitalização Geral:",
                 doc.select("[id=\"UsagePage.ScanCountsDestinationTable.Send.Value\"]").text());
     
         return webData;

@@ -122,10 +122,10 @@ public class HP4303 extends PrinterModel {
             .sslSocketFactory(getSSLSocketFactory())
             .get();
         Map<String, String> webData = new HashMap<>();
-        webData.put("Geral", doc.select("[id=\"UsagePage.EquivalentImpressionsTable.Total.Total\"]").text());
-        webData.put("Impressão P$B", doc.select("[id=\"UsagePage.ImpressionsByMediaSizeTable.Print.TotalTotal\"]").text());
-        webData.put("Copia P&B", doc.select("[id=\"UsagePage.ImpressionsByMediaSizeTable.Copy.TotalTotal\"]").text());
-        webData.put("Digitalização Geral", doc.select("[id=\"UsagePage.ScanCountsDestinationTable.Send.Value\"]").text());
+        webData.put("Geral:", doc.select("[id=\"UsagePage.EquivalentImpressionsTable.Total.Total\"]").text());
+        webData.put("Impressão P$B:", doc.select("[id=\"UsagePage.ImpressionsByMediaSizeTable.Print.TotalTotal\"]").text());
+        webData.put("Copia P&B:", doc.select("[id=\"UsagePage.ImpressionsByMediaSizeTable.Copy.TotalTotal\"]").text());
+        webData.put("Digitalização Geral:", doc.select("[id=\"UsagePage.ScanCountsDestinationTable.Send.Value\"]").text());
         return webData;
     }
 
