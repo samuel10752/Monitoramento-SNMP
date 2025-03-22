@@ -11,14 +11,11 @@ import javax.net.ssl.HttpsURLConnection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.snmp4j.CommunityTarget;
-import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
-import org.snmp4j.event.ResponseEvent;
 import org.snmp4j.smi.OID;
-import org.snmp4j.smi.OctetString;
 import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.VariableBinding;
-import org.snmp4j.transport.DefaultUdpTransportMapping;
+import java.util.LinkedHashMap;
 
 import com.example.printercounters.controllers.PrinterModel;
 
@@ -30,21 +27,10 @@ public class EpsonL3250 extends PrinterModel {
 
     private static final Logger LOGGER = Logger.getLogger(EpsonL3250.class.getName());
 
-    public EpsonL3250(String ip, TextField macField, TextField serialField, TextField nameprinterField, TextArea webInfoArea) {
+    public EpsonL3250(String ip, TextField macField, TextField serialField, TextField nameprinterField,
+            TextArea webInfoArea) {
         super(ip, macField, serialField, nameprinterField, webInfoArea);
         LOGGER.info("Instância EpsonL3250 criada com IP: " + ip);
-    }
-
-    @Override
-    public String getWebCounters() {
-        LOGGER.info("getWebCounters chamado");
-        return "Contadores EpsonL3250"; // Simulação
-    }
-
-    @Override
-    public String getSerialNumber() {
-        LOGGER.info("getSerialNumber chamado");
-        return "SN1234567890"; // Simulação
     }
 
     @Override
@@ -54,14 +40,26 @@ public class EpsonL3250 extends PrinterModel {
     }
 
     @Override
+    public String getSerialNumber() {
+        LOGGER.info("getSerialNumber chamado");
+        return "SN1234567890"; // Simulação
+    }
+
+    @Override
+    public String getWebCounters() {
+        LOGGER.info("getWebCounters chamado");
+        return "Contadores EpsonL3250"; // Simulação
+    }
+
+    @Override
     public void fetchPrinterInfo() {
         try {
             LOGGER.info("Iniciando fetchPrinterInfo...");
-            Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
+            Snmp snmp = new Snmp(new org.snmp4j.transport.DefaultUdpTransportMapping());
             snmp.listen();
 
             CommunityTarget<UdpAddress> target = new CommunityTarget<>();
-            target.setCommunity(new OctetString("public"));
+            target.setCommunity(new org.snmp4j.smi.OctetString("public"));
             target.setAddress(new UdpAddress(ip + "/161"));
             target.setRetries(2);
             target.setTimeout(3000);
@@ -93,7 +91,7 @@ public class EpsonL3250 extends PrinterModel {
     public void fetchWebPageData() {
         try {
             LOGGER.info("Iniciando fetchWebPageData...");
-            String url = "http://" + ip + "/PRESENTATION/ADVANCED/INFO_MENTINFO/TOP";
+            String url = "https://" + ip + "/PRESENTATION/ADVANCED/INFO_MENTINFO/TOP";
 
             // Verifica se a página está acessível
             if (!isWebPageAccessible(url)) {
@@ -102,7 +100,7 @@ public class EpsonL3250 extends PrinterModel {
                 return;
             }
 
-            // Obtém os dados do painel web
+            // Obtém os dados da página web
             Map<String, String> webData = getWebPageData(url);
 
             // Exibe os dados capturados
@@ -111,9 +109,8 @@ public class EpsonL3250 extends PrinterModel {
                 webInfoArea.setText("Nenhuma informação encontrada na página web.");
             } else {
                 LOGGER.info("Dados do painel web capturados com sucesso.");
-                StringBuilder builder = new StringBuilder();
-                webData.forEach((key, value) -> builder.append(key).append(": ").append(value).append("\n"));
-                webInfoArea.setText(builder.toString());
+                String formattedData = formatWebDataAsText(webData);
+                webInfoArea.setText(formattedData); // Apresenta no TextArea
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Erro ao acessar o painel web de contadores", e);
@@ -122,46 +119,54 @@ public class EpsonL3250 extends PrinterModel {
     }
 
     private Map<String, String> getWebPageData(String url) throws IOException {
-        LOGGER.info("Conectando ao painel web: " + url);
-    
-        disableSSLCertificateChecking();
-    
-        // Carrega a página
+        PrinterModel.disableSSLCertificateChecking();
+
         Document doc = Jsoup.connect(url)
                 .userAgent("Mozilla/5.0")
                 .timeout(5000)
                 .ignoreHttpErrors(true)
                 .ignoreContentType(true)
                 .get();
-    
-        // Loga o conteúdo bruto da página para depuração
+
+        // Loga o conteúdo da página para depuração
         LOGGER.info("Conteúdo da página carregado: " + doc.outerHtml());
-    
-        // Extrai os contadores
-        Map<String, String> webData = new HashMap<>();
-        webData.put("Total Number of Pages", doc.select("dt:contains(Total Number of Pages) + dd").text());
-        webData.put("Total Number of B&W Pages", doc.select("dt:contains(Total Number of B&W Pages) + dd").text());
-        webData.put("Total Number of Color Pages", doc.select("dt:contains(Total Number of Color Pages) + dd").text());
-        webData.put("B&W Scan", doc.select("dt:contains(B&W Scan) + dd").text());
-        webData.put("Color Scan", doc.select("dt:contains(Color Scan) + dd").text());
-    
-        LOGGER.info("Dados capturados: " + webData);
+
+        // Extrai os dados
+        Map<String, String> webData = new LinkedHashMap<>();
+        webData.put("Geral", extractData(doc, "Total Number of Pages"));
+        webData.put("Geral P&B", extractData(doc, "Total Number of B&W Pages"));
+        webData.put("Geral Cor Total", extractData(doc, "Total Number of Color Pages"));
+        webData.put("Digitalização P&B", extractData(doc, "B&W Scan"));
+        webData.put("Digitalização Colorida", extractData(doc, "Color Scan"));
+
         return webData;
     }
-    
+
+    private String formatWebDataAsText(Map<String, String> webData) {
+        StringBuilder outputBuilder = new StringBuilder();
+
+        // Adiciona os dados com formato tabular
+        webData.forEach((key, value) -> outputBuilder.append(key).append("\t").append(value).append("\n"));
+
+        return outputBuilder.toString();
+    }
+
+    private String extractData(Document doc, String label) {
+        // Seleciona o texto associado ao rótulo
+        String data = doc.select("dt:contains(" + label + ") + dd").text();
+        return data.isEmpty() ? "Dado não encontrado" : data;
+    }
 
     private boolean isWebPageAccessible(String url) {
         try {
-            LOGGER.info("Verificando acessibilidade da página: " + url);
-
+            PrinterModel.disableSSLCertificateChecking(); // Use the static method here
             HttpsURLConnection connection = (HttpsURLConnection) new java.net.URL(url).openConnection();
             connection.setRequestMethod("GET");
-            connection.setConnectTimeout(5000); // Tempo limite de 5 segundos
+            connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
             connection.connect();
 
             int responseCode = connection.getResponseCode();
-            LOGGER.info("Código de resposta HTTP: " + responseCode);
             connection.disconnect();
 
             return (responseCode == 200);
@@ -169,29 +174,6 @@ public class EpsonL3250 extends PrinterModel {
             LOGGER.log(Level.SEVERE, "Erro ao verificar acessibilidade da página", e);
             return false;
         }
-    }
-
-    
-
-    protected String getSnmpValue(String oid, Snmp snmp, CommunityTarget<?> target) {
-        try {
-            LOGGER.info("Buscando valor SNMP para OID: " + oid);
-            PDU pdu = new PDU();
-            pdu.add(new VariableBinding(new OID(oid)));
-            pdu.setType(PDU.GET);
-
-            ResponseEvent response = snmp.get(pdu, target);
-            if (response != null && response.getResponse() != null) {
-                String value = response.getResponse().get(0).getVariable().toString();
-                LOGGER.info("Valor SNMP capturado: " + value);
-                return value;
-            } else {
-                LOGGER.warning("SNMP response null para OID: " + oid);
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Erro ao buscar valor SNMP", e);
-        }
-        return "Desconhecido";
     }
 
     private void showMessage(String message, Alert.AlertType type) {
