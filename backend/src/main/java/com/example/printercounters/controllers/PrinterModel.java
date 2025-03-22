@@ -1,5 +1,6 @@
 package com.example.printercounters.controllers;
 
+import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -25,7 +26,8 @@ public abstract class PrinterModel {
     protected TextField nameprinterField;
     protected TextArea webInfoArea;
 
-    public PrinterModel(String ip, TextField macField, TextField serialField, TextField nameprinterField, TextArea webInfoArea) {
+    public PrinterModel(String ip, TextField macField, TextField serialField, TextField nameprinterField,
+            TextArea webInfoArea) {
         this.ip = ip;
         this.macField = macField;
         this.serialField = serialField;
@@ -43,10 +45,9 @@ public abstract class PrinterModel {
 
     public abstract void fetchWebPageData();
 
-
-protected void disableSSLCertificateChecking() {
+    public static void disableSSLCertificateChecking() {
         try {
-            TrustManager[] trustAllCerts = new TrustManager[]{
+            TrustManager[] trustAllCertificates = new TrustManager[] {
                     new X509TrustManager() {
                         public X509Certificate[] getAcceptedIssuers() {
                             return null;
@@ -60,8 +61,8 @@ protected void disableSSLCertificateChecking() {
                     }
             };
 
-            SSLContext sc = SSLContext.getInstance("SSL");
-            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            SSLContext sc = SSLContext.getInstance("TLS");
+            sc.init(null, trustAllCertificates, new SecureRandom());
             HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
             HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> true);
         } catch (Exception e) {
