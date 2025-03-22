@@ -40,6 +40,7 @@ public class PrinterInfoDisplay extends Application {
     private TextField macField;
     private TextField serialField;
     private TextField brandField;
+    private TextField MarcaLabel;
 
     @Override
     public void start(Stage primaryStage) {
@@ -92,7 +93,11 @@ public class PrinterInfoDisplay extends Application {
         Button fetchButton = new Button("Buscar Dados");
         fetchButton.setOnAction(event -> fetchPrinterData());
 
-        Label brandLabel = new Label("Marca da Impressora:");
+        Label manufacturerLabel = new Label("Fabricante da Impressora:");
+        MarcaLabel = new TextField();
+        MarcaLabel.setEditable(false);
+
+        Label brandLabel = new Label("Modelo da Impressora:");
         brandField = new TextField();
         brandField.setEditable(false);
 
@@ -109,8 +114,9 @@ public class PrinterInfoDisplay extends Application {
         webInfoArea.setEditable(false);
         webInfoArea.setWrapText(true);
 
-        mainLayout.getChildren().addAll(ipLabel, ipField, fetchButton, brandLabel, brandField, macLabel, macField,
-                serialLabel, serialField, infoLabel, webInfoArea);
+        mainLayout.getChildren().addAll(ipLabel, ipField, fetchButton, manufacturerLabel, MarcaLabel, brandLabel,
+                brandField,
+                macLabel, macField, serialLabel, serialField, infoLabel, webInfoArea);
 
         stage.setScene(new Scene(mainLayout));
     }
@@ -132,28 +138,41 @@ public class PrinterInfoDisplay extends Application {
             return;
         }
 
-        brandField.setText(detectedBrand);
+        // Atualiza o campo de fabricante (marca)
+        MarcaLabel.setText(detectedBrand);
         LOGGER.info("Marca da impressora detectada: " + detectedBrand);
 
         try {
             PrinterModel printer;
+
+            // Simplificação: criação da instância via InfoHP ou InfoEpson
             if (detectedBrand.equalsIgnoreCase("HP")) {
                 LOGGER.info("Criando instância de impressora HP.");
-                String selectedModel = "HP4303";
-                printer = InfoHP.createHPPrinter(ip, selectedModel, macField, serialField, brandField, webInfoArea);
-            } else if (detectedBrand.equalsIgnoreCase("Epson")) {
+                printer = InfoHP.createHPPrinter(ip, macField, serialField, brandField, webInfoArea);
+            }
+            if (detectedBrand.equalsIgnoreCase("Epson")) {
                 LOGGER.info("Criando instância de impressora Epson.");
-                String selectedModel = "EpsonL3250";
-                printer = InfoEpson.createEpsonPrinter(ip, selectedModel, macField, serialField, brandField, webInfoArea);
+                printer = InfoEpson.createEpsonPrinter(ip, "EpsonL3250", macField, serialField, brandField,
+                        webInfoArea); // Provide the model name
             } else {
-                LOGGER.warning("Marca da impressora não suportada: " + detectedBrand);
-                showMessage("Erro: Marca da impressora não suportada.", Alert.AlertType.ERROR);
+                LOGGER.warning("Fabricante não suportado: " + detectedBrand);
+                showMessage("Erro: Fabricante não suportado.", Alert.AlertType.ERROR);
                 return;
             }
 
-            printer.fetchPrinterInfo();
-            printer.fetchWebPageData();
-        } catch (Exception e) {
+            printer.fetchPrinterInfo(); // Buscar informações específicas da impressora
+            printer.fetchWebPageData(); // Buscar informações da página web
+
+            // Formatar o endereço MAC após buscar as informações
+            if (macField.getText() != null && !macField.getText().isEmpty()) {
+                String formattedMac = formatMacAddress(macField.getText());
+                macField.setText(formattedMac); // Atualizar o campo com o MAC formatado
+                LOGGER.info("Endereço MAC formatado: " + formattedMac);
+            }
+
+        } catch (
+
+        Exception e) {
             LOGGER.log(Level.SEVERE, "Erro ao processar os dados da impressora", e);
             showMessage("Erro ao processar os dados da impressora: " + e.getMessage(), Alert.AlertType.ERROR);
         }
@@ -174,7 +193,7 @@ public class PrinterInfoDisplay extends Application {
 
         String brandFromWeb = detectBrandFromWeb(ip);
         if (brandFromWeb != null) {
-            LOGGER.info("Marca detectada via página web: " + brandFromWeb);
+            LOGGER.info("Fabricante detectado via página web: " + brandFromWeb);
             return brandFromWeb;
         }
 
@@ -213,6 +232,22 @@ public class PrinterInfoDisplay extends Application {
             LOGGER.log(Level.SEVERE, "Erro ao buscar valor SNMP para OID: " + oid, e);
         }
         return null;
+    }
+
+    public static String formatMacAddress(String rawMac) {
+        // Remove caracteres desnecessários, como pontos ou traços
+        String cleanedMac = rawMac.replaceAll("[^a-fA-F0-9]", "");
+
+        // Formatar em pares de caracteres separados por dois pontos
+        StringBuilder formattedMac = new StringBuilder();
+        for (int i = 0; i < cleanedMac.length(); i += 2) {
+            formattedMac.append(cleanedMac.substring(i, i + 2).toUpperCase());
+            if (i < cleanedMac.length() - 2) {
+                formattedMac.append(":");
+            }
+        }
+
+        return formattedMac.toString();
     }
 
     private String detectBrandFromWeb(String ip) {
