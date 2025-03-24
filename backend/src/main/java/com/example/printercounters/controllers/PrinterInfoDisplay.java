@@ -40,7 +40,6 @@ public class PrinterInfoDisplay extends Application {
     private TextField macField;
     private TextField serialField;
     private TextField brandField;
-    private TextField MarcaLabel;
 
     @Override
     public void start(Stage primaryStage) {
@@ -93,10 +92,6 @@ public class PrinterInfoDisplay extends Application {
         Button fetchButton = new Button("Buscar Dados");
         fetchButton.setOnAction(event -> fetchPrinterData());
 
-        Label manufacturerLabel = new Label("Fabricante da Impressora:");
-        MarcaLabel = new TextField();
-        MarcaLabel.setEditable(false);
-
         Label brandLabel = new Label("Modelo da Impressora:");
         brandField = new TextField();
         brandField.setEditable(false);
@@ -114,7 +109,7 @@ public class PrinterInfoDisplay extends Application {
         webInfoArea.setEditable(false);
         webInfoArea.setWrapText(true);
 
-        mainLayout.getChildren().addAll(ipLabel, ipField, fetchButton, manufacturerLabel, MarcaLabel, brandLabel,
+        mainLayout.getChildren().addAll(ipLabel, ipField, fetchButton, brandLabel,
                 brandField,
                 macLabel, macField, serialLabel, serialField, infoLabel, webInfoArea);
 
@@ -131,74 +126,43 @@ public class PrinterInfoDisplay extends Application {
         String ip = ipField.getText();
         LOGGER.info("Buscando dados da impressora com IP: " + ip);
 
-        String detectedBrand = detectPrinterBrand(ip);
-        if (detectedBrand == null) {
-            LOGGER.warning("Não foi possível determinar a marca da impressora para o IP: " + ip);
-            showMessage("Erro: Não foi possível determinar a marca da impressora.", Alert.AlertType.ERROR);
-            return;
-        }
-
-        // Atualiza o campo de fabricante (marca)
-        MarcaLabel.setText(detectedBrand);
-        LOGGER.info("Marca da impressora detectada: " + detectedBrand);
-
         try {
             PrinterModel printer;
 
-            // Simplificação: criação da instância via InfoHP ou InfoEpson
-            if (detectedBrand.equalsIgnoreCase("HP")) {
-                LOGGER.info("Criando instância de impressora HP.");
-                printer = InfoHP.createHPPrinter(ip, macField, serialField, brandField, webInfoArea);
-            }
-            if (detectedBrand.equalsIgnoreCase("Epson")) {
-                LOGGER.info("Criando instância de impressora Epson.");
-                printer = InfoEpson.createEpsonPrinter(ip, "EpsonL3250", macField, serialField, brandField,
-                        webInfoArea); // Provide the model name
+            // Utiliza InfoHP e InfoEpson para detectar e criar instâncias de modelos
+            String detectedHPModel = InfoHP.detectPrinterModelHP(ip);
+            if (detectedHPModel.equals("HP4303") || detectedHPModel.equals("E52645Flow")) {
+                LOGGER.info("Identificado como impressora HP: " + detectedHPModel);
+                printer = InfoHP.createHPPrinter(ip, detectedHPModel, macField, serialField, brandField, webInfoArea);
+            } else if (InfoEpson.detectPrinterModelEpson(ip).equals("EpsonL3250")
+                    || InfoEpson.detectPrinterModelEpson(ip).equals("EpsonL3150")) {
+                LOGGER.info("Identificado como impressora Epson.");
+                // Passe o modelo detectado como o segundo parâmetro
+                String detectedEpsonModel = InfoEpson.detectPrinterModelEpson(ip);
+                printer = InfoEpson.createEpsonPrinter(ip, detectedEpsonModel, macField, serialField, brandField,
+                        webInfoArea);
             } else {
-                LOGGER.warning("Fabricante não suportado: " + detectedBrand);
-                showMessage("Erro: Fabricante não suportado.", Alert.AlertType.ERROR);
+                LOGGER.warning("Impressora não suportada para o IP: " + ip);
+                showMessage("Erro: Impressora não suportada ou modelo não identificado.", Alert.AlertType.ERROR);
                 return;
             }
 
-            printer.fetchPrinterInfo(); // Buscar informações específicas da impressora
-            printer.fetchWebPageData(); // Buscar informações da página web
+            // Busca informações específicas da impressora
+            printer.fetchPrinterInfo();
+            printer.fetchWebPageData();
 
-            // Formatar o endereço MAC após buscar as informações
             if (macField.getText() != null && !macField.getText().isEmpty()) {
                 String formattedMac = formatMacAddress(macField.getText());
                 macField.setText(formattedMac); // Atualizar o campo com o MAC formatado
                 LOGGER.info("Endereço MAC formatado: " + formattedMac);
             }
-
+            
         } catch (
 
         Exception e) {
-            LOGGER.log(Level.SEVERE, "Erro ao processar os dados da impressora", e);
+            LOGGER.log(Level.SEVERE, "Erro ao buscar os dados da impressora", e);
             showMessage("Erro ao processar os dados da impressora: " + e.getMessage(), Alert.AlertType.ERROR);
         }
-    }
-
-    private String detectPrinterBrand(String ip) {
-        LOGGER.info("Detectando a marca da impressora para o IP: " + ip);
-
-        String printerModel = getSnmpValue("1.3.6.1.2.1.1.5.0", ip);
-        if (printerModel != null && !printerModel.isEmpty()) {
-            LOGGER.info("Modelo da impressora detectado via SNMP: " + printerModel);
-            if (printerModel.toLowerCase().contains("epson")) {
-                return "Epson";
-            } else if (printerModel.toLowerCase().contains("hp")) {
-                return "HP";
-            }
-        }
-
-        String brandFromWeb = detectBrandFromWeb(ip);
-        if (brandFromWeb != null) {
-            LOGGER.info("Fabricante detectado via página web: " + brandFromWeb);
-            return brandFromWeb;
-        }
-
-        LOGGER.warning("Não foi possível determinar a marca da impressora para o IP: " + ip);
-        return null;
     }
 
     private String getSnmpValue(String oid, String ip) {

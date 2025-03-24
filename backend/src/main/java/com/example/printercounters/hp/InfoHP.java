@@ -51,35 +51,40 @@ public class InfoHP {
         }
     }
 
-    // Método para detectar o modelo específico HP utilizando o OID do serial HP4303
     public static String detectPrinterModelHP(String ip) {
         try {
+            // Instancia SNMP para realizar a consulta
             Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
             snmp.listen();
-
+    
             CommunityTarget<UdpAddress> target = new CommunityTarget<>();
             target.setCommunity(new OctetString("public"));
             target.setAddress(new UdpAddress(ip + "/161"));
             target.setRetries(2);
             target.setTimeout(3000);
             target.setVersion(org.snmp4j.mp.SnmpConstants.version2c);
-
-            // Tenta obter o valor do OID específico do serial da HP4303
-            String serialHP4303 = getSnmpValue("1.3.6.1.4.1.11.2.3.9.4.2.1.1.3.3.0", snmp, target);
-            snmp.close();
-
-            if (serialHP4303 != null && !serialHP4303.equals("Desconhecido") && !serialHP4303.isEmpty()) {
-                return "HP4303";
-            } else {
-                // Se não encontrou valor no OID específico, você pode assumir outro modelo ou
-                // retornar "Desconhecido".
+    
+            // Consultando OID para E52645Flow
+            String nameE52645Flow = getSnmpValue("1.3.6.1.2.1.43.5.1.1.16.1", snmp, target);
+            if (nameE52645Flow != null && nameE52645Flow.toLowerCase().contains("e52645")) { // Ajuste para "e52645"
+                snmp.close();
                 return "E52645Flow";
             }
+    
+            // Consultando OID para HP4303
+            String nameHP4303 = getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, target);
+            if (nameHP4303 != null && nameHP4303.toLowerCase().contains("4303")) { // Ajuste para "hp4303"
+                snmp.close();
+                return "HP4303";
+            }
+    
+            snmp.close();
         } catch (Exception e) {
             System.err.println("Erro ao detectar o modelo HP: " + e.getMessage());
         }
         return "Desconhecido";
     }
+    
 
     // Método que cria a instância correta dos modelos HP com base no modelo
     // detectado

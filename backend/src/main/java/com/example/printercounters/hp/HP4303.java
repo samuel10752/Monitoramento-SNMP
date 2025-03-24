@@ -35,6 +35,7 @@ public class HP4303 extends PrinterModel {
         super(ip, macField, serialField, nameprinterField, webInfoArea);
     }
 
+
     @Override
     public String getWebCounters() {
         return "Contadores HP4303"; // Ajuste conforme a necessidade

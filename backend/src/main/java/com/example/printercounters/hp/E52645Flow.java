@@ -31,10 +31,10 @@ import javafx.scene.control.TextField;
 
 public class E52645Flow extends PrinterModel {
 
-    public E52645Flow(String ip, TextField macField, TextField serialField, TextField nameprinterField, TextArea webInfoArea) {
+    public E52645Flow( String ip, TextField macField, TextField serialField, TextField nameprinterField, TextArea webInfoArea) {
         super(ip, macField, serialField, nameprinterField, webInfoArea);
     }
-
+    
     @Override
     public String getWebCounters() {
         return "Contadores Epson"; // Simulação
@@ -65,7 +65,7 @@ public class E52645Flow extends PrinterModel {
 
             macField.setText(getSnmpValue("1.3.6.1.2.1.2.2.1.6.2", snmp, target));
             serialField.setText(getSnmpValue("1.3.6.1.2.1.43.5.1.1.17.1", snmp, target));
-            nameprinterField.setText(getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, target));
+            nameprinterField.setText(getSnmpValue("1.3.6.1.2.1.43.5.1.1.16.1", snmp, target));
 
             snmp.close();
         } catch (IOException e) {
