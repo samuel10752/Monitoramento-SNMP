@@ -98,8 +98,8 @@ public class MIBExtractorGUI extends Application {
             CommunityTarget target = new CommunityTarget();
             target.setCommunity(new OctetString("public"));
             target.setAddress(targetAddress);
-            target.setRetries(2);
-            target.setTimeout(1500);
+            target.setRetries(1);
+            target.setTimeout(500);
             target.setVersion(SnmpConstants.version2c);
 
             PDU pdu = new PDU();
@@ -147,7 +147,7 @@ public class MIBExtractorGUI extends Application {
             target.setCommunity(new OctetString("public"));
             target.setAddress((UdpAddress) targetAddress);
             target.setRetries(1);       // menos tentativas se a rede for estável
-            target.setTimeout(1000);      // timeout de 1 segundo
+            target.setTimeout(500);      // timeout de 1 segundo
             target.setVersion(SnmpConstants.version2c);
     
             // Defina o OID base de acordo com a subárvore que deseja extrair
@@ -159,7 +159,7 @@ public class MIBExtractorGUI extends Application {
                 PDU pdu = new PDU();
                 pdu.add(new VariableBinding(currentOid));
                 pdu.setType(PDU.GETBULK);
-                pdu.setMaxRepetitions(20); // aumentar para recuperar mais OIDs de uma vez
+                pdu.setMaxRepetitions(50); // aumentar para recuperar mais OIDs de uma vez
     
                 ResponseEvent response = snmp.getBulk(pdu, target);
                 PDU responsePDU = response.getResponse();
