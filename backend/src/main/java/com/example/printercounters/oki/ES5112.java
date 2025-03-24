@@ -46,7 +46,7 @@ public class ES5112 extends PrinterModel {
     
         @Override
         public String getMacAddress() {
-            return getSnmpValue("1.3.6.1.4.1.2001.1.2.1.1.140.0", snmp, null); // OID de MAC Address para este modelo
+            return getSnmpValue("1.3.6.1.2.1.2.2.1.6.1", snmp, null); // OID de MAC Address para este modelo
         }
     
         @Override

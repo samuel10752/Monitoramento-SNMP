@@ -18,6 +18,7 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import com.example.printercounters.epson.InfoEpson;
 import com.example.printercounters.hp.InfoHP;
+import com.example.printercounters.oki.infooki;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -129,7 +130,7 @@ public class PrinterInfoDisplay extends Application {
         try {
             PrinterModel printer;
 
-            // Utiliza InfoHP e InfoEpson para detectar e criar instâncias de modelos
+            // Verificar e criar instâncias baseadas nos modelos das impressoras
             String detectedHPModel = InfoHP.detectPrinterModelHP(ip);
             if (detectedHPModel.equals("HP4303") || detectedHPModel.equals("E52645Flow")) {
                 LOGGER.info("Identificado como impressora HP: " + detectedHPModel);
@@ -137,9 +138,14 @@ public class PrinterInfoDisplay extends Application {
             } else if (InfoEpson.detectPrinterModelEpson(ip).equals("EpsonL3250")
                     || InfoEpson.detectPrinterModelEpson(ip).equals("EpsonL3150")) {
                 LOGGER.info("Identificado como impressora Epson.");
-                // Passe o modelo detectado como o segundo parâmetro
                 String detectedEpsonModel = InfoEpson.detectPrinterModelEpson(ip);
                 printer = InfoEpson.createEpsonPrinter(ip, detectedEpsonModel, macField, serialField, brandField,
+                        webInfoArea);
+            } else if (infooki.detectPrinterModelOKI(ip).equals("OKIES5112")
+                    || infooki.detectPrinterModelOKI(ip).equals("OKIES341")) { // Exemplos de modelos OKI
+                LOGGER.info("Identificado como impressora OKI.");
+                String detectedOKIModel = infooki.detectPrinterModelOKI(ip);
+                printer = infooki.createOKIPrinter(ip, detectedOKIModel, macField, serialField, brandField,
                         webInfoArea);
             } else {
                 LOGGER.warning("Impressora não suportada para o IP: " + ip);
@@ -151,15 +157,13 @@ public class PrinterInfoDisplay extends Application {
             printer.fetchPrinterInfo();
             printer.fetchWebPageData();
 
+            // Formatação do endereço MAC
             if (macField.getText() != null && !macField.getText().isEmpty()) {
                 String formattedMac = formatMacAddress(macField.getText());
                 macField.setText(formattedMac); // Atualizar o campo com o MAC formatado
                 LOGGER.info("Endereço MAC formatado: " + formattedMac);
             }
-            
-        } catch (
-
-        Exception e) {
+        } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Erro ao buscar os dados da impressora", e);
             showMessage("Erro ao processar os dados da impressora: " + e.getMessage(), Alert.AlertType.ERROR);
         }
