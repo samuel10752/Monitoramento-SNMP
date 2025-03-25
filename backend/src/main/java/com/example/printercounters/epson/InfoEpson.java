@@ -11,8 +11,6 @@ import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import com.example.printercounters.controllers.PrinterModel;
-import com.example.printercounters.hp.E52645Flow;
-import com.example.printercounters.hp.HP4303;
 
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
@@ -59,7 +57,7 @@ public class InfoEpson {
             target.setAddress(new UdpAddress(ip + "/161"));
             target.setRetries(2);
             target.setTimeout(3000);
-            target.setVersion(org.snmp4j.mp.SnmpConstants.version2c);
+            target.setVersion(org.snmp4j.mp.SnmpConstants.version1);
 
             // Lógica fictícia para buscar modelo via OID. Ajuste conforme necessário.
             String model = getSnmpValue("1.3.6.1.4.1.367.3.2.1.1.5.0", snmp, target); // OID de exemplo
