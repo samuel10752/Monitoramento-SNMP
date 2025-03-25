@@ -31,10 +31,18 @@ import javafx.scene.control.TextField;
 
 public class HP4303 extends PrinterModel {
 
-    public HP4303(String ip, TextField macField, TextField serialField, TextField nameprinterField, TextArea webInfoArea) {
-        super(ip, macField, serialField, nameprinterField, webInfoArea);
-    }
+    private Snmp snmp;
 
+    public HP4303(String ip, TextField macField, TextField serialField, TextField nameprinterField,
+            TextArea webInfoArea) {
+        super(ip, macField, serialField, nameprinterField, webInfoArea);
+        try {
+            this.snmp = new Snmp(new DefaultUdpTransportMapping());
+            this.snmp.listen(); // Start SNMP session
+        } catch (IOException e) {
+            System.err.println("Erro ao inicializar SNMP: " + e.getMessage());
+        }
+    }
 
     @Override
     public String getWebCounters() {
@@ -63,12 +71,12 @@ public class HP4303 extends PrinterModel {
             target.setAddress(new UdpAddress(ip + "/161"));
             target.setRetries(2);
             target.setTimeout(3000);
-            target.setVersion(org.snmp4j.mp.SnmpConstants.version2c);
+            target.setVersion(org.snmp4j.mp.SnmpConstants.version1);
 
             // Busca os valores utilizando os OIDs corretos
             macField.setText(getSnmpValue("1.3.6.1.2.1.2.2.1.6.2", snmp, target));
             serialField.setText(getSnmpValue("1.3.6.1.4.1.11.2.3.9.4.2.1.1.3.3.0", snmp, target));
-            nameprinterField.setText(getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, target));
+            nameprinterField.setText(getSnmpValue("1.3.6.1.4.1.11.2.3.9.4.2.1.1.3.2.0", snmp, target));
 
             snmp.close();
         } catch (IOException e) {
@@ -78,6 +86,35 @@ public class HP4303 extends PrinterModel {
             showMessage("Erro ao buscar informações SNMP.", Alert.AlertType.ERROR);
         }
     }
+
+    @Override
+    public void fetchOidData(String oid) {
+        try {
+            // Fetch data using the given OID
+            PDU pdu = new PDU();
+            pdu.add(new VariableBinding(new OID(oid)));
+            pdu.setType(PDU.GET);
+
+            CommunityTarget<UdpAddress> target = new CommunityTarget<>();
+            target.setCommunity(new OctetString("public"));
+            target.setAddress(new UdpAddress(ip + "/161"));
+            target.setRetries(2);
+            target.setTimeout(3000);
+            target.setVersion(org.snmp4j.mp.SnmpConstants.version1);
+
+            ResponseEvent response = snmp.get(pdu, target);
+            if (response != null && response.getResponse() != null) {
+                VariableBinding vb = response.getResponse().get(0);
+                System.out.println("OID " + oid + " retornou: " + vb.getVariable());
+            } else {
+                System.err.println("Nenhuma resposta para OID " + oid);
+            }
+        } catch (Exception e) {
+            System.err.println("Erro ao buscar OID: " + oid + " - " + e.getMessage());
+        }
+    }
+
+    // getIp() is already provided by the PrinterModel superclass
 
     @Override
     public void fetchWebPageData() {
@@ -103,11 +140,17 @@ public class HP4303 extends PrinterModel {
     private SSLSocketFactory getSSLSocketFactory() {
         try {
             SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, new TrustManager[]{ new X509TrustManager() {
-                public void checkClientTrusted(X509Certificate[] chain, String authType) {}
-                public void checkServerTrusted(X509Certificate[] chain, String authType) {}
-                public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
-            }}, new java.security.SecureRandom());
+            sslContext.init(null, new TrustManager[] { new X509TrustManager() {
+                public void checkClientTrusted(X509Certificate[] chain, String authType) {
+                }
+
+                public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                }
+
+                public X509Certificate[] getAcceptedIssuers() {
+                    return new X509Certificate[0];
+                }
+            } }, new java.security.SecureRandom());
             return sslContext.getSocketFactory();
         } catch (Exception e) {
             throw new RuntimeException("Erro ao configurar SSL", e);
@@ -117,16 +160,19 @@ public class HP4303 extends PrinterModel {
     private Map<String, String> getWebPageData(String url) throws IOException {
         disableSSLCertificateChecking();
         Document doc = Jsoup.connect(url)
-            .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
-            .ignoreHttpErrors(true)
-            .ignoreContentType(true)
-            .sslSocketFactory(getSSLSocketFactory())
-            .get();
+                .userAgent(
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
+                .ignoreHttpErrors(true)
+                .ignoreContentType(true)
+                .sslSocketFactory(getSSLSocketFactory())
+                .get();
         Map<String, String> webData = new HashMap<>();
         webData.put("Geral:", doc.select("[id=\"UsagePage.EquivalentImpressionsTable.Total.Total\"]").text());
-        webData.put("Impressão P$B:", doc.select("[id=\"UsagePage.ImpressionsByMediaSizeTable.Print.TotalTotal\"]").text());
+        webData.put("Impressão P$B:",
+                doc.select("[id=\"UsagePage.ImpressionsByMediaSizeTable.Print.TotalTotal\"]").text());
         webData.put("Copia P&B:", doc.select("[id=\"UsagePage.ImpressionsByMediaSizeTable.Copy.TotalTotal\"]").text());
-        webData.put("Digitalização Geral:", doc.select("[id=\"UsagePage.ScanCountsDestinationTable.Send.Value\"]").text());
+        webData.put("Digitalização Geral:",
+                doc.select("[id=\"UsagePage.ScanCountsDestinationTable.Send.Value\"]").text());
         return webData;
     }
 
@@ -173,7 +219,7 @@ public class HP4303 extends PrinterModel {
             target.setAddress(new UdpAddress(ip + "/161"));
             target.setRetries(2);
             target.setTimeout(3000);
-            target.setVersion(org.snmp4j.mp.SnmpConstants.version2c);
+            target.setVersion(org.snmp4j.mp.SnmpConstants.version1);
             String result = getSnmpValue(oid, snmp, target);
             snmp.close();
             return result;
@@ -190,7 +236,8 @@ public class HP4303 extends PrinterModel {
         alert.setContentText(message);
         alert.showAndWait();
     }
-    
-// Implemente a lógica de desabilitar a verificação de certificados SSL, se necessário.
+
+    // Implemente a lógica de desabilitar a verificação de certificados SSL, se
+    // necessário.
 
 }
