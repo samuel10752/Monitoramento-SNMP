@@ -45,11 +45,11 @@ public class infooki {
             case "ES5112":
                 return new ES5112(ip, macField, serialField, brandField, webInfoArea);
             case "ES4172LP":
-            return new ES4172LP(ip, macField, serialField, brandField, webInfoArea);
+                return new ES4172LP(ip, macField, serialField, brandField, webInfoArea);
             // Adicione outros casos conforme novos modelos forem implementados
             default:
                 // Caso o modelo selecionado não seja reconhecido, retorna um modelo padrão
-                return new ES5112(ip, macField, serialField, brandField, webInfoArea);
+                return new ES4172LP(ip, macField, serialField, brandField, webInfoArea);
         }
     }
 
@@ -77,7 +77,7 @@ public class infooki {
             }
 
             // Verificar OID adicional para nome da impressora
-            String nameOID = getSnmpValue("1.3.6.1.2.1.1.5.0", snmp, target);
+            String nameOID = getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, target);
             if (nameOID != null && nameOID.contains("OKI-ES5112")) {
                 return "ES5112";
             }
@@ -104,9 +104,9 @@ public class infooki {
             case "ES5112":
                 return new ES5112(ip, macField, serialField, brandField, webInfoArea);
             case "ES4172LP":
-            return new ES4172LP(ip, macField, serialField, brandField, webInfoArea);
+                return new ES4172LP(ip, macField, serialField, brandField, webInfoArea);
             default:
-                return new ES5112(ip, macField, serialField, brandField, webInfoArea);
+                return new ES4172LP(ip, macField, serialField, brandField, webInfoArea);
         }
     }
 

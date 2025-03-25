@@ -1,15 +1,8 @@
 package com.example.printercounters.oki;
 
 import java.io.IOException;
-import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -48,7 +41,7 @@ public class ES4172LP extends PrinterModel {
 
     @Override
     public String getMacAddress() {
-        return getSnmpValue("1.3.6.1.2.1.2.2.1.6.1", snmp, null); // OID de MAC Address para este modelo
+        return getSnmpValue("1.3.6.1.4.1.2001.1.2.1.1.140.0", snmp, null); // OID de MAC Address para este modelo
     }
 
     @Override
@@ -73,7 +66,7 @@ public class ES4172LP extends PrinterModel {
 
             macField.setText(getSnmpValue("1.3.6.1.4.1.2001.1.2.1.1.140.0", snmp, target));
             serialField.setText(getSnmpValue("1.3.6.1.2.1.43.5.1.1.17.1", snmp, target));
-            nameprinterField.setText(getSnmpValue("1.3.6.1.2.1.1.5.0", snmp, target)); // Nome da impressora
+            nameprinterField.setText(getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, target)); // Nome da impressora
 
         } catch (Exception e) {
             macField.setText("Erro");
