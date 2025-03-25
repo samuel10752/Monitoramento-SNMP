@@ -1,5 +1,7 @@
 package com.example.printercounters.hp;
 
+import java.io.IOException;
+
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
@@ -52,39 +54,50 @@ public class InfoHP {
     }
 
     public static String detectPrinterModelHP(String ip) {
+        Snmp snmp = null;
         try {
-            // Instancia SNMP para realizar a consulta
-            Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
+            snmp = new Snmp(new DefaultUdpTransportMapping());
             snmp.listen();
-    
+
             CommunityTarget<UdpAddress> target = new CommunityTarget<>();
             target.setCommunity(new OctetString("public"));
             target.setAddress(new UdpAddress(ip + "/161"));
             target.setRetries(2);
             target.setTimeout(3000);
-            target.setVersion(org.snmp4j.mp.SnmpConstants.version2c);
-    
-            // Consultando OID para E52645Flow
-            String nameE52645Flow = getSnmpValue("1.3.6.1.2.1.43.5.1.1.16.1", snmp, target);
-            if (nameE52645Flow != null && nameE52645Flow.toLowerCase().contains("e52645")) { // Ajuste para "e52645"
-                snmp.close();
-                return "E52645Flow";
+            target.setVersion(org.snmp4j.mp.SnmpConstants.version1);
+
+            // Primeiro, use OID específico para HP
+            String specificHPModel = getSnmpValue("1.3.6.1.4.1.11.2.3.9.4.2.1.1.3.2.0", snmp, target);
+            if (specificHPModel != null) {
+                if (specificHPModel.contains("4303")) {
+                    return "HP4303";
+                } else if (specificHPModel.contains("E52645")) {
+                    return "E52645Flow";
+                }
             }
-    
-            // Consultando OID para HP4303
-            String nameHP4303 = getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, target);
-            if (nameHP4303 != null && nameHP4303.toLowerCase().contains("4303")) { // Ajuste para "hp4303"
-                snmp.close();
-                return "HP4303";
+
+            // Tente com um OID genérico
+            String genericModel = getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, target);
+            if (genericModel != null) {
+                if (genericModel.contains("4303")) {
+                    return "HP4303";
+                } else if (genericModel.contains("E52645")) {
+                    return "E52645Flow";
+                }
             }
-    
-            snmp.close();
         } catch (Exception e) {
             System.err.println("Erro ao detectar o modelo HP: " + e.getMessage());
+        } finally {
+            try {
+                if (snmp != null) {
+                    snmp.close();
+                }
+            } catch (IOException e) {
+                System.err.println("Erro ao fechar sessão SNMP: " + e.getMessage());
+            }
         }
         return "Desconhecido";
     }
-    
 
     // Método que cria a instância correta dos modelos HP com base no modelo
     // detectado
