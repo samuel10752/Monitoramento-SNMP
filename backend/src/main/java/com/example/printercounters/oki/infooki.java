@@ -44,9 +44,9 @@ public class infooki {
         switch (selectedModel) {
             case "ES5112":
                 return new ES5112(ip, macField, serialField, brandField, webInfoArea);
-            // case "ES5112":
-            // return new E52645Flow(ip, macField, serialField, brandField, webInfoArea);
-            // // Adicione outros casos conforme novos modelos forem implementados
+            case "ES4172LP":
+            return new ES4172LP(ip, macField, serialField, brandField, webInfoArea);
+            // Adicione outros casos conforme novos modelos forem implementados
             default:
                 // Caso o modelo selecionado não seja reconhecido, retorna um modelo padrão
                 return new ES5112(ip, macField, serialField, brandField, webInfoArea);
@@ -71,8 +71,8 @@ public class infooki {
             if (modelOID != null) {
                 if (modelOID.contains("ES5112")) {
                     return "ES5112";
-                } else if (modelOID.contains("OKIES341")) {
-                    return "OKIES341";
+                } else if (modelOID.contains("ES4172LP")) {
+                    return "ES4172LP";
                 }
             }
 
@@ -103,8 +103,8 @@ public class infooki {
         switch (model) {
             case "ES5112":
                 return new ES5112(ip, macField, serialField, brandField, webInfoArea);
-            // case "E52645Flow":
-            // return new E52645Flow(ip, macField, serialField, brandField, webInfoArea);
+            case "ES4172LP":
+            return new ES4172LP(ip, macField, serialField, brandField, webInfoArea);
             default:
                 return new ES5112(ip, macField, serialField, brandField, webInfoArea);
         }

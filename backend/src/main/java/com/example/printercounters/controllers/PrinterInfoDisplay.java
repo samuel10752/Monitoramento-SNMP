@@ -133,7 +133,7 @@ public class PrinterInfoDisplay extends Application {
 
                 // Verificar modelos OKI
             } else if ((detectedModel = infooki.detectPrinterModelOKI(ip)) != null &&
-                    (detectedModel.equals("ES5112") || detectedModel.equals("OKIES341"))) {
+                    (detectedModel.equals("ES5112") || detectedModel.equals("ES4172LP"))) {
                 LOGGER.info("Identificado como impressora OKI: " + detectedModel);
                 printer = infooki.createOKIPrinter(ip, detectedModel, macField, serialField, brandField, webInfoArea);
             }
