@@ -1,20 +1,7 @@
 package com.example.printercounters.controllers;
 
-import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.snmp4j.CommunityTarget;
-import org.snmp4j.PDU;
-import org.snmp4j.Snmp;
-import org.snmp4j.event.ResponseEvent;
-import org.snmp4j.smi.OID;
-import org.snmp4j.smi.OctetString;
-import org.snmp4j.smi.UdpAddress;
-import org.snmp4j.smi.VariableBinding;
-import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import com.example.printercounters.epson.InfoEpson;
 import com.example.printercounters.hp.InfoHP;
@@ -128,78 +115,51 @@ public class PrinterInfoDisplay extends Application {
         LOGGER.info("Buscando dados da impressora com IP: " + ip);
 
         try {
-            PrinterModel printer;
+            String detectedModel = null;
+            PrinterModel printer = null;
 
-            // Verificar e criar instâncias baseadas nos modelos das impressoras
-            String detectedHPModel = InfoHP.detectPrinterModelHP(ip);
-            if (detectedHPModel.equals("HP4303") || detectedHPModel.equals("E52645Flow")) {
-                LOGGER.info("Identificado como impressora HP: " + detectedHPModel);
-                printer = InfoHP.createHPPrinter(ip, detectedHPModel, macField, serialField, brandField, webInfoArea);
-            } else if (InfoEpson.detectPrinterModelEpson(ip).equals("EpsonL3250")
-                    || InfoEpson.detectPrinterModelEpson(ip).equals("EpsonL3150")) {
-                LOGGER.info("Identificado como impressora Epson.");
-                String detectedEpsonModel = InfoEpson.detectPrinterModelEpson(ip);
-                printer = InfoEpson.createEpsonPrinter(ip, detectedEpsonModel, macField, serialField, brandField,
+            // Verificar modelos HP
+            detectedModel = InfoHP.detectPrinterModelHP(ip);
+            if (detectedModel != null && (detectedModel.equals("HP4303") || detectedModel.equals("E52645Flow"))) {
+                LOGGER.info("Identificado como impressora HP: " + detectedModel);
+                printer = InfoHP.createHPPrinter(ip, detectedModel, macField, serialField, brandField, webInfoArea);
+
+                // Verificar modelos Epson
+            } else if ((detectedModel = InfoEpson.detectPrinterModelEpson(ip)) != null &&
+                    (detectedModel.equals("EpsonL3250") || detectedModel.equals("EpsonL3150"))) {
+                LOGGER.info("Identificado como impressora Epson: " + detectedModel);
+                printer = InfoEpson.createEpsonPrinter(ip, detectedModel, macField, serialField, brandField,
                         webInfoArea);
-            } else if (infooki.detectPrinterModelOKI(ip).equals("OKIES5112")
-                    || infooki.detectPrinterModelOKI(ip).equals("OKIES341")) { // Exemplos de modelos OKI
-                LOGGER.info("Identificado como impressora OKI.");
-                String detectedOKIModel = infooki.detectPrinterModelOKI(ip);
-                printer = infooki.createOKIPrinter(ip, detectedOKIModel, macField, serialField, brandField,
-                        webInfoArea);
-            } else {
+
+                // Verificar modelos OKI
+            } else if ((detectedModel = infooki.detectPrinterModelOKI(ip)) != null &&
+                    (detectedModel.equals("ES5112") || detectedModel.equals("OKIES341"))) {
+                LOGGER.info("Identificado como impressora OKI: " + detectedModel);
+                printer = infooki.createOKIPrinter(ip, detectedModel, macField, serialField, brandField, webInfoArea);
+            }
+
+            // Exibir mensagem de erro se o modelo não for detectado
+            if (printer == null) {
                 LOGGER.warning("Impressora não suportada para o IP: " + ip);
                 showMessage("Erro: Impressora não suportada ou modelo não identificado.", Alert.AlertType.ERROR);
                 return;
             }
 
-            // Busca informações específicas da impressora
+            // Buscar informações específicas do modelo detectado
+            LOGGER.info("Buscando informações específicas do modelo detectado: " + detectedModel);
             printer.fetchPrinterInfo();
             printer.fetchWebPageData();
 
-            // Formatação do endereço MAC
+            // Formatar o endereço MAC se disponível
             if (macField.getText() != null && !macField.getText().isEmpty()) {
                 String formattedMac = formatMacAddress(macField.getText());
-                macField.setText(formattedMac); // Atualizar o campo com o MAC formatado
+                macField.setText(formattedMac);
                 LOGGER.info("Endereço MAC formatado: " + formattedMac);
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Erro ao buscar os dados da impressora", e);
             showMessage("Erro ao processar os dados da impressora: " + e.getMessage(), Alert.AlertType.ERROR);
         }
-    }
-
-    private String getSnmpValue(String oid, String ip) {
-        try {
-            LOGGER.info("Consultando valor SNMP para OID: " + oid + " no IP: " + ip);
-            Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
-            snmp.listen();
-
-            CommunityTarget<UdpAddress> target = new CommunityTarget<>();
-            target.setCommunity(new OctetString("public"));
-            target.setAddress(new UdpAddress(ip + "/161"));
-            target.setRetries(2);
-            target.setTimeout(3000);
-            target.setVersion(org.snmp4j.mp.SnmpConstants.version2c);
-
-            PDU pdu = new PDU();
-            pdu.add(new VariableBinding(new OID(oid)));
-            pdu.setType(PDU.GET);
-
-            ResponseEvent response = snmp.get(pdu, target);
-            if (response != null && response.getResponse() != null) {
-                String value = response.getResponse().get(0).getVariable().toString();
-                LOGGER.info("Valor SNMP capturado: " + value);
-                snmp.close();
-                return value;
-            }
-
-            LOGGER.warning("Resposta SNMP nula para o OID: " + oid);
-            snmp.close();
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Erro ao buscar valor SNMP para OID: " + oid, e);
-        }
-        return null;
     }
 
     public static String formatMacAddress(String rawMac) {
@@ -218,35 +178,4 @@ public class PrinterInfoDisplay extends Application {
         return formattedMac.toString();
     }
 
-    private String detectBrandFromWeb(String ip) {
-        String url = "http://" + ip;
-        try {
-            LOGGER.info("Conectando à página web da impressora no IP: " + ip);
-            Document doc = Jsoup.connect(url)
-                    .userAgent("Mozilla/5.0")
-                    .ignoreHttpErrors(true)
-                    .ignoreContentType(true)
-                    .timeout(5000)
-                    .get();
-
-            String title = doc.title();
-            LOGGER.info("Título da página capturado: " + title);
-            if (title.toLowerCase().contains("epson")) {
-                return "Epson";
-            } else if (title.toLowerCase().contains("hp")) {
-                return "HP";
-            }
-
-            String bodyText = doc.body().text();
-            LOGGER.info("Texto do corpo da página capturado: " + bodyText);
-            if (bodyText.toLowerCase().contains("epson")) {
-                return "Epson";
-            } else if (bodyText.toLowerCase().contains("hp")) {
-                return "HP";
-            }
-        } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Erro ao acessar a página web no IP: " + ip, e);
-        }
-        return null;
-    }
 }
