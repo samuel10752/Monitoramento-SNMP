@@ -1,5 +1,7 @@
 package com.example.printercounters.oki;
 
+import java.io.IOException;
+
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
@@ -37,13 +39,13 @@ public class infooki {
             TextField macField, TextField serialField,
             TextField brandField, TextArea webInfoArea) {
         // Define a marca como "HP"
-        brandField.setText("HP");
+        brandField.setText("OKI");
 
         switch (selectedModel) {
-            case "HP4303":
+            case "ES5112":
                 return new ES5112(ip, macField, serialField, brandField, webInfoArea);
-            case "E52645Flow":
-            //     return new E52645Flow(ip, macField, serialField, brandField, webInfoArea);
+            // case "ES5112":
+            // return new E52645Flow(ip, macField, serialField, brandField, webInfoArea);
             // // Adicione outros casos conforme novos modelos forem implementados
             default:
                 // Caso o modelo selecionado não seja reconhecido, retorna um modelo padrão
@@ -52,39 +54,46 @@ public class infooki {
     }
 
     public static String detectPrinterModelOKI(String ip) {
+        Snmp snmp = null;
         try {
-            // Instancia SNMP para realizar a consulta
-            Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
+            snmp = new Snmp(new DefaultUdpTransportMapping());
             snmp.listen();
-    
+
             CommunityTarget<UdpAddress> target = new CommunityTarget<>();
             target.setCommunity(new OctetString("public"));
             target.setAddress(new UdpAddress(ip + "/161"));
             target.setRetries(2);
             target.setTimeout(3000);
-            target.setVersion(org.snmp4j.mp.SnmpConstants.version2c);
-    
-            // Consultando OID para E52645Flow
-            String nameE52645Flow = getSnmpValue("1.3.6.1.2.1.43.5.1.1.16.1", snmp, target);
-            if (nameE52645Flow != null && nameE52645Flow.toLowerCase().contains("e52645")) { // Ajuste para "e52645"
-                snmp.close();
-                return "E52645Flow";
+            target.setVersion(org.snmp4j.mp.SnmpConstants.version1);
+
+            // Verificar o OID genérico para modelos OKI
+            String modelOID = getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, target);
+            if (modelOID != null) {
+                if (modelOID.contains("ES5112")) {
+                    return "ES5112";
+                } else if (modelOID.contains("OKIES341")) {
+                    return "OKIES341";
+                }
             }
-    
-            // Consultando OID para 
-            // String nameHP4303 = getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, target);
-            // if (nameHP4303 != null && nameHP4303.toLowerCase().contains("4303")) { // Ajuste para "hp4303"
-            //     snmp.close();
-            //     return "HP4303";
-            // }
-    
-            snmp.close();
+
+            // Verificar OID adicional para nome da impressora
+            String nameOID = getSnmpValue("1.3.6.1.2.1.1.5.0", snmp, target);
+            if (nameOID != null && nameOID.contains("OKI-ES5112")) {
+                return "ES5112";
+            }
+
         } catch (Exception e) {
-            System.err.println("Erro ao detectar o modelo HP: " + e.getMessage());
+            System.err.println("Erro ao detectar o modelo OKI: " + e.getMessage());
+        } finally {
+            try {
+                if (snmp != null)
+                    snmp.close();
+            } catch (IOException e) {
+                System.err.println("Erro ao fechar sessão SNMP: " + e.getMessage());
+            }
         }
         return "Desconhecido";
     }
-    
 
     // Método que cria a instância correta dos modelos HP com base no modelo
     // detectado
@@ -95,7 +104,7 @@ public class infooki {
             case "ES5112":
                 return new ES5112(ip, macField, serialField, brandField, webInfoArea);
             // case "E52645Flow":
-            //     return new E52645Flow(ip, macField, serialField, brandField, webInfoArea);
+            // return new E52645Flow(ip, macField, serialField, brandField, webInfoArea);
             default:
                 return new ES5112(ip, macField, serialField, brandField, webInfoArea);
         }
@@ -111,15 +120,14 @@ public class infooki {
             ResponseEvent response = snmp.get(pdu, target);
             if (response != null && response.getResponse() != null) {
                 VariableBinding vb = response.getResponse().get(0);
-                System.out.println("Requisição para OID " + vb.getOid() + " retornou: " + vb.getVariable());
-                return vb.getVariable().toString();
-            } else {
-                System.err.println("Nenhuma resposta para OID " + oid);
+                if (vb != null && vb.getVariable() != null) {
+                    return vb.getVariable().toString();
+                }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Erro ao buscar OID " + oid + ": " + e.getMessage());
         }
-        return "Desconhecido";
+        return null; // Retorna null se nada for encontrado
     }
 
     // Método estático para realizar um SNMP walk a partir de um OID base e retornar
