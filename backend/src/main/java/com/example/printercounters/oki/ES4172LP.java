@@ -10,6 +10,7 @@ import org.jsoup.nodes.Element;
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
+import org.snmp4j.TransportMapping;
 import org.snmp4j.event.ResponseEvent;
 import org.snmp4j.smi.OID;
 import org.snmp4j.smi.OctetString;
@@ -103,57 +104,102 @@ public class ES4172LP extends PrinterModel {
         }
     }
 
-    // getIp() is already provided by the PrinterModel superclass
-
     @Override
     public void fetchWebPageData() {
         try {
-            String url = "https://" + ip + "/countsum.htm";
+            String url = "https://" + ip + "/count_top.htm";
             disableSSLCertificateChecking();
 
             // Adiciona autenticação no cabeçalho
             Document doc = Jsoup.connect(url)
                     .header("Authorization",
-                            "Basic " + java.util.Base64.getEncoder().encodeToString("usuario:senha".getBytes()))
+                            "Basic " + java.util.Base64.getEncoder().encodeToString("admin:aaaaaa".getBytes()))
                     .get();
 
-            Map<String, String> webData = new HashMap<>();
+            // Inicializar variáveis para armazenar as contagens
             int tray1Count = 0;
             int mpTrayCount = 0;
+            int blackCopyCount = 0; // Contagem de cópias P&B usando SNMP
+            int blackPrintCount = 0; // Contagem de impressões P&B usando SNMP
+            int totalScannedPages = 0; // Páginas digitalizadas
 
-            // Capturar o nome da impressora pelo título da página
-            String printerName = doc.title();
-            nameprinterField.setText(printerName);
+            // Capturar informações de "Tray1" e "MP Tray"
+            Element tray1Elem = doc.select("tr:contains(Tray1)").first();
+            Element mpTrayElem = doc.select("tr:contains(MP Tray)").first();
 
-            // Buscar contadores de impressão
-            Element tray1 = doc.getElementById("TRAY_1");
-            if (tray1 != null && tray1.nextElementSibling() != null) {
-                tray1Count = Integer.parseInt(tray1.nextElementSibling().text().trim());
+            if (tray1Elem != null && tray1Elem.children().size() > 1) {
+                tray1Count = Integer.parseInt(tray1Elem.child(1).text().trim());
             }
-            webData.put("Bandeja 1", String.valueOf(tray1Count));
 
-            Element mpTray = doc.getElementById("MP_TRAY");
-            if (mpTray != null && mpTray.nextElementSibling() != null) {
-                mpTrayCount = Integer.parseInt(mpTray.nextElementSibling().text().trim());
+            if (mpTrayElem != null && mpTrayElem.children().size() > 1) {
+                mpTrayCount = Integer.parseInt(mpTrayElem.child(1).text().trim());
             }
-            webData.put("Bandeja Multiuso", String.valueOf(mpTrayCount));
 
-            // Calcular o total de contagem das bandejas
-            int totalTrayCount = tray1Count + mpTrayCount;
-            webData.put("Contagem Total: Tray Count", String.valueOf(totalTrayCount));
+            
+            
+            Element totalScannedElem = doc.select("tr:contains(Total Scanned Pages)").first();
 
-            // Exibir dados na interface
-            if (webData.isEmpty()) {
-                webInfoArea.setText("Nenhuma informação encontrada na página web.");
-            } else {
-                StringBuilder builder = new StringBuilder();
-                webData.forEach((key, value) -> builder.append(key).append(": ").append(value).append("\n"));
-                webInfoArea.setText(builder.toString());
+            if (totalScannedElem != null && totalScannedElem.children().size() > 1) {
+                totalScannedPages = Integer.parseInt(totalScannedElem.child(1).text().trim());
             }
+    
+    
+            // Consultar OIDs para contagem de cópias e impressões P&B
+            try {
+                blackCopyCount = fetchSNMPValue(ip, "1.3.6.1.4.1.2001.1.1.1.1.11.1.10.170.1.17.3"); // Cópias P&B
+                blackPrintCount = fetchSNMPValue(ip, "1.3.6.1.4.1.2001.1.1.1.1.11.1.10.170.1.21.1"); // Impressões P&B
+            } catch (Exception snmpError) {
+                webInfoArea.setText("Erro ao consultar SNMP: " + snmpError.getMessage());
+            }
+
+            // Calcular a contagem total das bandejas
+            int totalTrayCount = blackCopyCount + blackPrintCount;
+
+            // Exibir informações diretamente na interface
+            StringBuilder builder = new StringBuilder();
+            builder.append("Bandeja 1: ").append(tray1Count).append("\n");
+            builder.append("Bandeja Multiuso: ").append(mpTrayCount).append("\n");
+            builder.append("Total das Bandejas: ").append(totalTrayCount).append("\n");
+            builder.append("Digitalição geral: ").append(totalScannedPages).append("\n");
+            builder.append("Cópias Preto e Branco: ").append(blackCopyCount).append("\n");
+            builder.append("Impressões Preto e Branco: ").append(blackPrintCount).append("\n");
+
+            webInfoArea.setText(builder.toString());
+
         } catch (IOException e) {
             webInfoArea.setText("Erro ao acessar a página web: " + e.getMessage());
         } catch (NumberFormatException e) {
             webInfoArea.setText("Erro ao processar os valores numéricos: " + e.getMessage());
+        }
+    }
+
+    // Método para consultar um valor SNMP
+    private int fetchSNMPValue(String ip, String oid) throws Exception {
+        TransportMapping transport = new DefaultUdpTransportMapping();
+        transport.listen();
+
+        Snmp snmp = new Snmp(transport);
+
+        // Configuração do alvo SNMP
+        CommunityTarget target = new CommunityTarget();
+        target.setCommunity(new org.snmp4j.smi.OctetString("public")); // Substitua pela sua comunidade SNMP
+        target.setAddress(new UdpAddress(ip + "/161")); // Substitua pela porta SNMP padrão, se necessário
+        target.setRetries(2);
+        target.setTimeout(1000);
+        target.setVersion(org.snmp4j.mp.SnmpConstants.version1);
+
+        // Configuração da solicitação SNMP
+        PDU pdu = new PDU();
+        pdu.add(new VariableBinding(new OID(oid)));
+        pdu.setType(PDU.GET);
+
+        // Enviar solicitação e receber resposta
+        PDU response = snmp.send(pdu, target).getResponse();
+
+        if (response != null && response.size() > 0) {
+            return Integer.parseInt(response.get(0).getVariable().toString());
+        } else {
+            throw new Exception("Sem resposta ou dados inválidos para OID: " + oid);
         }
     }
 
