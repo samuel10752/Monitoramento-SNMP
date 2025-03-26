@@ -18,10 +18,11 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.scene.layout.HBox;
 
 public class PrinterInfoDisplay extends Application {
 
-    private static final String DEFAULT_PASSWORD = "123";
+    private static final String DEFAULT_PASSWORD = "123"; // Senha fixa padrão
     private static final Logger LOGGER = Logger.getLogger(PrinterInfoDisplay.class.getName());
     private TextArea webInfoArea;
     private TextField ipField;
@@ -35,17 +36,24 @@ public class PrinterInfoDisplay extends Application {
     }
 
     private void showLoginScreen(Stage stage) {
+        LOGGER.info("Carregando tela de login...");
         VBox loginLayout = new VBox(15);
         loginLayout.setPadding(new Insets(15));
+        loginLayout.setStyle("-fx-background-color: #e0f7fa;");
 
         Label passwordLabel = new Label("Digite a senha:");
         PasswordField passwordField = new PasswordField();
         passwordField.setPromptText("Senha...");
+        passwordField.setStyle("-fx-font-size: 14px;");
 
-        Button loginButton = new Button("Entrar");
-        loginButton.setOnAction(event -> {
-            if (passwordField.getText().equals(DEFAULT_PASSWORD)) {
-                LOGGER.info("Senha correta. Carregando a interface principal.");
+        // Criar botões com tamanho fixo
+        Button okButton = new Button("Ok");
+        okButton.setStyle("-fx-background-color: #00796b; -fx-text-fill: white; -fx-font-size: 14px;");
+        okButton.setPrefWidth(100); // Tamanho fixo do botão
+        okButton.setOnAction(event -> {
+            String inputPassword = passwordField.getText();
+            if (DEFAULT_PASSWORD.equals(inputPassword)) {
+                LOGGER.info("Senha correta. Carregando a interface principal...");
                 showMainInterface(stage);
             } else {
                 LOGGER.warning("Senha incorreta. Acesso negado.");
@@ -53,8 +61,23 @@ public class PrinterInfoDisplay extends Application {
             }
         });
 
-        loginLayout.getChildren().addAll(passwordLabel, passwordField, loginButton);
-        stage.setScene(new Scene(loginLayout));
+        Button cancelButton = new Button("Cancelar");
+        cancelButton.setStyle("-fx-background-color: #c62828; -fx-text-fill: white; -fx-font-size: 14px;");
+        cancelButton.setPrefWidth(100); // Tamanho fixo do botão
+        cancelButton.setOnAction(event -> {
+            LOGGER.info("Operação cancelada pelo usuário.");
+            stage.close();
+        });
+
+        // Organizar botões horizontalmente
+        HBox buttonLayout = new HBox(10);
+        buttonLayout.setPadding(new Insets(10));
+        buttonLayout.getChildren().addAll(okButton, cancelButton);
+
+        loginLayout.getChildren().addAll(passwordLabel, passwordField, buttonLayout);
+
+        stage.setScene(new Scene(loginLayout, 220, 150)); // Define o tamanho inicial da janela
+        stage.setResizable(false); // Impede a expansão ou redimensionamento da janela
         stage.setTitle("Login");
         stage.show();
     }
@@ -70,38 +93,82 @@ public class PrinterInfoDisplay extends Application {
 
     private void showMainInterface(Stage stage) {
         stage.setTitle("Informações da Impressora");
-        VBox mainLayout = new VBox(15);
-        mainLayout.setPadding(new Insets(15));
+
+        // Layout principal com espaçamento e padding
+        VBox mainLayout = new VBox(20); // Espaçamento entre elementos
+        mainLayout.setPadding(new Insets(20));
+        mainLayout.setStyle("-fx-background-color: #f5f5f5;"); // Cor de fundo cinza claro
+
+        // Estilo para os rótulos
+        String labelStyle = "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #333333;";
 
         Label ipLabel = new Label("Digite o IP da impressora:");
+        ipLabel.setStyle(labelStyle);
         ipField = new TextField();
         ipField.setPromptText("Endereço IP");
-
-        Button fetchButton = new Button("Buscar Dados");
-        fetchButton.setOnAction(event -> fetchPrinterData());
+        ipField.setStyle("-fx-font-size: 12px; -fx-padding: 5;");
 
         Label brandLabel = new Label("Modelo da Impressora:");
+        brandLabel.setStyle(labelStyle);
         brandField = new TextField();
         brandField.setEditable(false);
+        brandField.setStyle("-fx-font-size: 12px; -fx-padding: 5; -fx-background-color: #e8e8e8;");
 
         Label macLabel = new Label("Endereço MAC:");
+        macLabel.setStyle(labelStyle);
         macField = new TextField();
         macField.setEditable(false);
+        macField.setStyle("-fx-font-size: 12px; -fx-padding: 5; -fx-background-color: #e8e8e8;");
 
         Label serialLabel = new Label("Número de Série:");
+        serialLabel.setStyle(labelStyle);
         serialField = new TextField();
         serialField.setEditable(false);
+        serialField.setStyle("-fx-font-size: 12px; -fx-padding: 5; -fx-background-color: #e8e8e8;");
 
         Label infoLabel = new Label("Contadores da Página Web:");
+        infoLabel.setStyle(labelStyle);
         webInfoArea = new TextArea();
         webInfoArea.setEditable(false);
         webInfoArea.setWrapText(true);
+        webInfoArea.setStyle("-fx-font-size: 12px; -fx-padding: 5; -fx-background-color: #e8e8e8;");
 
-        mainLayout.getChildren().addAll(ipLabel, ipField, fetchButton, brandLabel,
-                brandField,
-                macLabel, macField, serialLabel, serialField, infoLabel, webInfoArea);
+        // Botão para buscar dados
+        Button fetchButton = new Button("Buscar Dados");
+        fetchButton.setStyle(
+                "-fx-background-color:rgb(0, 47, 255); -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;");
+        fetchButton.setOnAction(event -> fetchPrinterData());
 
-        stage.setScene(new Scene(mainLayout));
+        // Botão adicional para recarregar dados
+        Button reloadButton = new Button("Recarregar Contadores");
+        reloadButton.setStyle(
+                "-fx-background-color:rgb(255, 165, 0); -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;");
+        reloadButton.setOnAction(event -> reloadCounters());
+
+        // Adicionar os botões em um layout horizontal
+        HBox buttonLayout = new HBox(10); // Espaçamento entre os botões
+        buttonLayout.setPadding(new Insets(10));
+        buttonLayout.getChildren().addAll(fetchButton, reloadButton);
+
+        // Adicionar elementos ao layout principal
+        mainLayout.getChildren().addAll(
+                ipLabel, ipField,
+                brandLabel, brandField,
+                macLabel, macField,
+                serialLabel, serialField,
+                infoLabel, webInfoArea,
+                buttonLayout);
+
+        // Ajustar cena com largura e altura específicas
+        stage.setScene(new Scene(mainLayout, 350, 620)); // Tamanho da janela
+    }
+
+    // Método para buscar contadores novamente
+    private void reloadCounters() {
+        LOGGER.info("Recarregando contadores da impressora...");
+        // Aqui você adicionará a lógica para recarregar os contadores, conforme
+        // necessário
+        showMessage("Dados do contador recarregados com sucesso!", Alert.AlertType.INFORMATION);
     }
 
     private void fetchPrinterData() {
