@@ -26,7 +26,7 @@ public class infooki {
      * externa à detecção via SNMP.
      *
      * @param ip            IP da impressora
-     * @param selectedModel Modelo selecionado (por exemplo, "ES5112", "E52645Flow",
+     * @param selectedModel Modelo selecionado (por exemplo, "ES5112", "ES4172LP",
      *                      etc.)
      * @param macField      Campo de exibição do MAC
      * @param serialField   Campo de exibição do número de série
