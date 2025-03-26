@@ -1,15 +1,8 @@
 package com.example.printercounters.oki;
 
 import java.io.IOException;
-import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
