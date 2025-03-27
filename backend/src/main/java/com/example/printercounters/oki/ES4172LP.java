@@ -58,6 +58,7 @@ public class ES4172LP extends PrinterModel {
     @Override
     public void fetchPrinterInfo() {
         try {
+            // Configuração do SNMP
             CommunityTarget<UdpAddress> target = new CommunityTarget<>();
             target.setCommunity(new OctetString("public"));
             target.setAddress(new UdpAddress(ip + "/161"));
@@ -65,10 +66,18 @@ public class ES4172LP extends PrinterModel {
             target.setTimeout(3000);
             target.setVersion(org.snmp4j.mp.SnmpConstants.version1);
 
+            // Buscar o nome da impressora via OID
+            String printerNameFromOID = getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, target);
+
+            // Buscar o nome da impressora via página web
+            String printerNameFromWeb = fetchPrinterNameFromWeb();
+
+            // Validação e escolha do valor correto
+            String printerName = validatePrinterName(printerNameFromOID, printerNameFromWeb);
+            nameprinterField.setText(printerName);
+
             macField.setText(getSnmpValue("1.3.6.1.4.1.2001.1.2.1.1.140.0", snmp, target));
             serialField.setText(getSnmpValue("1.3.6.1.2.1.43.5.1.1.17.1", snmp, target));
-            nameprinterField.setText(getSnmpValue("1.3.6.1.2.1.25.3.2.1.3.1", snmp, target)); // Nome da impressora
-
         } catch (Exception e) {
             macField.setText("Erro");
             serialField.setText("Erro");
@@ -104,16 +113,46 @@ public class ES4172LP extends PrinterModel {
         }
     }
 
+    // Método para buscar o nome da impressora pela página web
+    private String fetchPrinterNameFromWeb() {
+        try {
+            String url = "https://" + ip + "/countsum.htm";
+            disableSSLCertificateChecking();
+
+            // Conectar e buscar o título da página
+            Document doc = Jsoup.connect(url)
+                    .header("Authorization",
+                            "Basic " + java.util.Base64.getEncoder().encodeToString("usuario:senha".getBytes()))
+                    .get();
+            return doc.title(); // Nome da impressora extraído do título
+        } catch (IOException e) {
+            System.err.println("Erro ao buscar nome pela web: " + e.getMessage());
+            return "Erro (Web)";
+        }
+    }
+
+    // Método para validar e escolher o nome correto
+    private String validatePrinterName(String nameFromOID, String nameFromWeb) {
+        // Exemplo simples: Priorizar o nome via OID se válido, caso contrário, usar o
+        // da web
+        if (nameFromOID != null && !nameFromOID.isEmpty() && !nameFromOID.startsWith("Erro")) {
+            return nameFromOID;
+        } else if (nameFromWeb != null && !nameFromWeb.isEmpty() && !nameFromWeb.startsWith("Erro")) {
+            return nameFromWeb;
+        }
+        return "Nome Indisponível"; // Valor padrão se ambas as fontes falharem
+    }
+
     @Override
     public void fetchWebPageData() {
         try {
-            String url = "https://" + ip + "/count_top.htm";
+            String url = "https://" + ip + "/countsum.htm";
             disableSSLCertificateChecking();
 
             // Adiciona autenticação no cabeçalho
             Document doc = Jsoup.connect(url)
                     .header("Authorization",
-                            "Basic " + java.util.Base64.getEncoder().encodeToString("admin:aaaaaa".getBytes()))
+                            "Basic " + java.util.Base64.getEncoder().encodeToString("usuario:senha".getBytes()))
                     .get();
 
             // Inicializar variáveis para armazenar as contagens
@@ -135,15 +174,12 @@ public class ES4172LP extends PrinterModel {
                 mpTrayCount = Integer.parseInt(mpTrayElem.child(1).text().trim());
             }
 
-            
-            
             Element totalScannedElem = doc.select("tr:contains(Total Scanned Pages)").first();
 
             if (totalScannedElem != null && totalScannedElem.children().size() > 1) {
                 totalScannedPages = Integer.parseInt(totalScannedElem.child(1).text().trim());
             }
-    
-    
+
             // Consultar OIDs para contagem de cópias e impressões P&B
             try {
                 blackCopyCount = fetchSNMPValue(ip, "1.3.6.1.4.1.2001.1.1.1.1.11.1.10.170.1.17.3"); // Cópias P&B
