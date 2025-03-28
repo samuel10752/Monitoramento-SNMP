@@ -125,14 +125,14 @@ public class L3250 extends PrinterModel {
             if (totalPages != null && totalPages.nextElementSibling() != null) {
                 String totalPageCount = totalPages.nextElementSibling().selectFirst("div.preserve-white-space").text()
                         .trim();
-                webData.put("Total de Páginas", totalPageCount);
+                webData.put("Geral", totalPageCount);
             }
 
             // Buscar o total de páginas Preto e Branco
             Element bwPages = doc.selectFirst("dt.key:contains(Total Number of B&W Pages)");
             if (bwPages != null && bwPages.nextElementSibling() != null) {
                 String bwPageCount = bwPages.nextElementSibling().selectFirst("div.preserve-white-space").text().trim();
-                webData.put("Total de Páginas P&B", bwPageCount);
+                webData.put("Impressões P&B", bwPageCount);
             }
 
             // Buscar o total de páginas Coloridas
@@ -140,7 +140,7 @@ public class L3250 extends PrinterModel {
             if (colorPages != null && colorPages.nextElementSibling() != null) {
                 String colorPageCount = colorPages.nextElementSibling().selectFirst("div.preserve-white-space").text()
                         .trim();
-                webData.put("Total de Páginas Coloridas", colorPageCount);
+                webData.put("Impressõess Coloridas", colorPageCount);
             }
 
             // Buscar o total de páginas Digitalizações Preto e Branco
