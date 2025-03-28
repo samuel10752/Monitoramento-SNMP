@@ -140,7 +140,7 @@ public class ES5112 extends PrinterModel {
 
             // Calcular o total de contagem das bandejas
             int totalTrayCount = tray1Count + mpTrayCount;
-            webData.put("Contagem Total: Tray Count", String.valueOf(totalTrayCount));
+            webData.put("Geral", String.valueOf(totalTrayCount));
 
             // Exibir dados na interface
             if (webData.isEmpty()) {
