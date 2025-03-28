@@ -97,34 +97,48 @@ public class PrinterInfoDisplay extends Application {
         // Layout principal com espaçamento e padding
         VBox mainLayout = new VBox(20); // Espaçamento entre elementos
         mainLayout.setPadding(new Insets(20));
-        mainLayout.setStyle("-fx-background-color: #f5f5f5;"); // Cor de fundo cinza claro
+        mainLayout.setStyle("-fx-background-color:#e0f7fa;"); // Cor de fundo cinza claro
 
         // Estilo para os rótulos
         String labelStyle = "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #333333;";
 
-        Label ipLabel = new Label("Digite o IP da impressora:");
+        // Layout horizontal para IP e Modelo
+        HBox ipModelLayout = new HBox(10); // Espaçamento entre os elementos
+        ipModelLayout.setPadding(new Insets(10));
+
+        Label ipLabel = new Label("Digite o IP:");
         ipLabel.setStyle(labelStyle);
         ipField = new TextField();
         ipField.setPromptText("Endereço IP");
         ipField.setStyle("-fx-font-size: 12px; -fx-padding: 5;");
 
-        Label brandLabel = new Label("Modelo da Impressora:");
+        Label brandLabel = new Label("Modelo:");
         brandLabel.setStyle(labelStyle);
         brandField = new TextField();
         brandField.setEditable(false);
         brandField.setStyle("-fx-font-size: 12px; -fx-padding: 5; -fx-background-color: #e8e8e8;");
 
-        Label macLabel = new Label("Endereço MAC:");
+        // Adiciona os campos e rótulos ao layout horizontal
+        ipModelLayout.getChildren().addAll(ipLabel, ipField, brandLabel, brandField);
+
+        // Layout horizontal para MAC e Número de Série
+        HBox macSerialLayout = new HBox(10); // Espaçamento entre os elementos
+        macSerialLayout.setPadding(new Insets(10));
+
+        Label macLabel = new Label("Ende. MAC:");
         macLabel.setStyle(labelStyle);
         macField = new TextField();
         macField.setEditable(false);
         macField.setStyle("-fx-font-size: 12px; -fx-padding: 5; -fx-background-color: #e8e8e8;");
 
-        Label serialLabel = new Label("Número de Série:");
+        Label serialLabel = new Label("S/N:");
         serialLabel.setStyle(labelStyle);
         serialField = new TextField();
         serialField.setEditable(false);
         serialField.setStyle("-fx-font-size: 12px; -fx-padding: 5; -fx-background-color: #e8e8e8;");
+
+        // Adiciona os campos e rótulos ao layout horizontal
+        macSerialLayout.getChildren().addAll(macLabel, macField, serialLabel, serialField);
 
         Label infoLabel = new Label("Contadores da Página Web:");
         infoLabel.setStyle(labelStyle);
@@ -138,29 +152,29 @@ public class PrinterInfoDisplay extends Application {
         fetchButton.setStyle(
                 "-fx-background-color:rgb(0, 47, 255); -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;");
         fetchButton.setOnAction(event -> fetchPrinterData());
+        fetchButton.setPrefWidth(150); // Define a largura preferida do botão
 
         // Botão adicional para recarregar dados
         Button reloadButton = new Button("Recarregar Contadores");
         reloadButton.setStyle(
                 "-fx-background-color:rgb(255, 165, 0); -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;");
         reloadButton.setOnAction(event -> reloadCounters());
+        reloadButton.setPrefWidth(170); // Define a largura preferida do botão
 
         // Adicionar os botões em um layout horizontal
-        HBox buttonLayout = new HBox(10); // Espaçamento entre os botões
+        HBox buttonLayout = new HBox(100); // Reduz o espaçamento entre os botões
         buttonLayout.setPadding(new Insets(10));
         buttonLayout.getChildren().addAll(fetchButton, reloadButton);
 
         // Adicionar elementos ao layout principal
         mainLayout.getChildren().addAll(
-                ipLabel, ipField,
-                brandLabel, brandField,
-                macLabel, macField,
-                serialLabel, serialField,
+                ipModelLayout, // Adiciona o layout IP e Modelo
+                macSerialLayout, // Adiciona o layout MAC e Número de Série
                 infoLabel, webInfoArea,
                 buttonLayout);
 
         // Ajustar cena com largura e altura específicas
-        stage.setScene(new Scene(mainLayout, 350, 620)); // Tamanho da janela
+        stage.setScene(new Scene(mainLayout, 530, 410)); // Tamanho da janela
     }
 
     // Método para buscar contadores novamente
