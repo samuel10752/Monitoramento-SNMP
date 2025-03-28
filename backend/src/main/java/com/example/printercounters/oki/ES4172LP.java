@@ -195,10 +195,10 @@ public class ES4172LP extends PrinterModel {
             StringBuilder builder = new StringBuilder();
             builder.append("Bandeja 1: ").append(tray1Count).append("\n");
             builder.append("Bandeja Multiuso: ").append(mpTrayCount).append("\n");
-            builder.append("Total das Bandejas: ").append(totalTrayCount).append("\n");
+            builder.append("Geral: ").append(totalTrayCount).append("\n");
             builder.append("Digitalição geral: ").append(totalScannedPages).append("\n");
-            builder.append("Cópias Preto e Branco: ").append(blackCopyCount).append("\n");
-            builder.append("Impressões Preto e Branco: ").append(blackPrintCount).append("\n");
+            builder.append("Cópias B&W: ").append(blackCopyCount).append("\n");
+            builder.append("Impressões B&W: ").append(blackPrintCount).append("\n");
 
             webInfoArea.setText(builder.toString());
 
