@@ -45,6 +45,9 @@ public class InfoEpson {
             case "L3250":
                 return new L3250(ip, macField, serialField, brandField, webInfoArea);
             // Adicione outros casos conforme novos modelos forem implementados
+            case "L15150":
+            return new L15150(ip, macField, serialField, brandField, webInfoArea);
+        // Adicione outros casos conforme novos modelos forem implementados
             default:
                 // Caso o modelo selecionado não seja reconhecido, retorna um modelo padrão
                 return new L3250(ip, macField, serialField, brandField, webInfoArea);
@@ -70,8 +73,8 @@ public class InfoEpson {
             if (modelOID != null) {
                 if (modelOID.contains("L3250")) {
                     return "L3250";
-                } else if (modelOID.contains("L3250")) {
-                    return "L3250";
+                } else if (modelOID.contains("L15150")) {
+                    return "L15150";
                 }
             }
 
@@ -103,6 +106,8 @@ public class InfoEpson {
         switch (model) {
             case "L3250":
                 return new L3250(ip, macField, serialField, brandField, webInfoArea);
+                case "L15150":
+                return new L15150(ip, macField, serialField, brandField, webInfoArea);
             default:
                 return new L3250(ip, macField, serialField, brandField, webInfoArea);
         }
