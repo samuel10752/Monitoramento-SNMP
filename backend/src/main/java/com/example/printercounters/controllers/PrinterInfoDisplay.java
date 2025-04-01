@@ -207,7 +207,7 @@ public class PrinterInfoDisplay extends Application {
 
                 // Verificar modelos Epson
             } else if ((detectedModel = InfoEpson.detectPrinterModelEpson(ip)) != null &&
-                    (detectedModel.equals("L3250") || detectedModel.equals("L3150")
+                    (detectedModel.equals("L3250") || detectedModel.equals("L15150")
                             || detectedModel.equals("L6260"))) {
                 LOGGER.info("Identificado como impressora Epson: " + detectedModel);
                 printer = InfoEpson.createEpsonPrinter(ip, detectedModel, macField, serialField, brandField,
